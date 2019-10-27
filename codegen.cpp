@@ -2,25 +2,6 @@
 
 namespace TOZ3 {
 
-void CodeGenToz3::emit_top(const IR::P4Control* c) {
-    std::stringstream ss;
-    std::map<cstring, cstring> params; // param name -> type
-
-    auto ctrl_name = c->name.name;
-    // output header
-    builder->append(depth, "z3_args = [\n");
-    for (auto cp : c->getApplyParameters()->parameters) {
-        builder->appendFormat(depth+1,
-         "(\"%s\", z3_reg.type(\"%s\")),\n", cp->name.name, cp->type->toString());
-    }
-    builder->append(depth, "]\n");
-
-    builder->append(depth, "z3_reg.register_inouts(\"inouts\", z3_args)\n\n");
-    builder->appendFormat(depth, "%s_args = z3_reg.instance(\"\", z3_reg.type(\"inouts\"))\n\n", ctrl_name);
-    builder->appendFormat(depth, "%s_args.add_externs(z3_reg._externs)\n\n\n", ctrl_name);
-    builder->appendFormat(depth, "def %s(p4_vars):\n", ctrl_name);
-}
-
 Visitor::profile_t CodeGenToz3::init_apply(const IR::Node* node) {
     return Inspector::init_apply(node);
 }
@@ -41,15 +22,12 @@ bool CodeGenToz3::preorder(const IR::P4Parser* p) {
     auto parser_name = p->name.name;
 
     // output header
-    builder->append(depth, "z3_args = [\n");
+    builder->appendFormat(depth, "%s_args = [\n", parser_name);
     for (auto cp : p->getApplyParameters()->parameters) {
         builder->appendFormat(depth+1,
          "(\"%s\", z3_reg.type(\"%s\")),\n", cp->name.name, cp->type->toString());
     }
     builder->append(depth, "]\n");
-
-    builder->append(depth, "z3_reg.register_inouts(\"inouts\", z3_args)\n\n");
-    builder->appendFormat(depth, "%s_args = z3_reg.instance(\"\", z3_reg.type(\"inouts\"))\n\n", parser_name);
 
     builder->appendFormat(depth, "def %s(p4_vars):\n", parser_name);
     builder->append(depth+1, "pass\n");
@@ -57,28 +35,41 @@ bool CodeGenToz3::preorder(const IR::P4Parser* p) {
     return false;
 }
 
-bool CodeGenToz3::preorder(const IR::P4Control* p4control) {
-    std::stringstream ss;
+bool CodeGenToz3::preorder(const IR::P4Control* c) {
 
-    emit_top(p4control);
+    auto ctrl_name = c->name.name;
+    // output header
+    builder->appendFormat(depth, "%s_args = [\n", ctrl_name);
+    for (auto cp : c->getApplyParameters()->parameters) {
+        builder->appendFormat(depth+1,
+         "(\"%s\", z3_reg.type(\"%s\")),\n", cp->name.name, cp->type->toString());
+    }
+    builder->append(depth, "]\n");
+
+    builder->appendFormat(depth, "def %s(input_args):\n", ctrl_name);
+
+    depth++;
+    builder->append(depth, "z3_reg.register_inouts(\"inouts\", input_args)\n\n");
+    builder->appendFormat(depth, "p4_vars = z3_reg.instance(\"\", z3_reg.type(\"inouts\"))\n\n", ctrl_name);
+    builder->appendFormat(depth, "p4_vars.add_externs(z3_reg._externs)\n");
 
     /*
      * (1) Action
      * (2) Table
      */
-    depth++;
     builder->append(depth, "ctrl_body = BlockStatement()\n\n");
-    for (auto a : p4control->controlLocals) {
+    for (auto a : c->controlLocals) {
             visit(a);
             if (a->is<IR::Declaration_Variable>())
                 builder->append(depth, "ctrl_body.add(stmt)\n");
     }
+
     /*
      * (3) Apply Part
      */
-
     builder->appendFormat(depth, "p4_vars.add_externs(z3_reg._externs)\n");
-    visit(p4control->body);
+    visit(c->body);
+
     builder->append(depth, "ctrl_body.add(stmt)\n");
     builder->append(depth, "return ctrl_body.eval(p4_vars=p4_vars, expr_chain=[])\n\n");
     depth--;

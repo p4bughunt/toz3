@@ -134,7 +134,6 @@ public:
     }
 
 
-    void emit_top(const IR::P4Control* p);
 
     bool preorder(const IR::Expression* expr) override {    P4C_UNIMPLEMENTED("expr %s: not yet supported",
          expr->node_type_name()); return false; }
