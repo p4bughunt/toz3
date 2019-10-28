@@ -8,6 +8,7 @@ Visitor::profile_t CodeGenToz3::init_apply(const IR::Node* node) {
 
 void CodeGenToz3::end_apply(const IR::Node *) {
 
+    builder->appendFormat(depth, "return z3_reg, main");
     if (nullptr != outStream) {
         cstring res = builder->toString();
         *outStream << res.c_str();
@@ -55,7 +56,8 @@ bool CodeGenToz3::preorder(const IR::P4Control* c) {
 
     /*
      * (1) Action
-     * (2) Table
+     * (2) Tables
+     * (3) Instance Declarations
      */
     for (auto a : c->controlLocals) {
             visit(a);
@@ -70,7 +72,6 @@ bool CodeGenToz3::preorder(const IR::P4Control* c) {
     /*
      * (3) Apply Part
      */
-    // builder->appendFormat(depth, "p4_vars.add_externs(z3_reg._externs)\n");
     builder->appendFormat(depth, "###### CONTROL %s APPLY ######", ctrl_name);
     builder->newline();
     visit(c->body);
@@ -119,7 +120,7 @@ bool CodeGenToz3::preorder(const IR::Property* p) {
     if (p->name.name == "default_action") {
         builder->appendFormat(depth, "%s.add_default(", tab_name);
         visit(p->value);
-        builder->append(depth, ")");
+        builder->append(")");
         builder->newline();
     }
     else if (p->name.name == "size") {
@@ -447,7 +448,6 @@ bool CodeGenToz3::preorder(const IR::BXor* expr) {
     return false;
 }
 
-/* LAnd and BAnd seem to be the same in Python. TODO: Check that */
 bool CodeGenToz3::preorder(const IR::LAnd* expr) {
     builder->append("P4land(");
     visit(expr->left);
@@ -457,7 +457,6 @@ bool CodeGenToz3::preorder(const IR::LAnd* expr) {
     return false;
 }
 
-/*Bor and Lor seem to be the same in Python. TODO: Check that */
 bool CodeGenToz3::preorder(const IR::LOr* expr) {
     builder->append("P4lor(");
     visit(expr->left);
@@ -671,6 +670,7 @@ bool CodeGenToz3::preorder(const IR::Type_Package* t) {
          cp->name.name, cp->name.name);
         builder->newline();
     }
+    builder->newline();
     return false;
 }
 
@@ -739,29 +739,31 @@ bool CodeGenToz3::preorder(const IR::ArrayIndex* a) {
 
 // for V1Switch Declaration Instance
 bool CodeGenToz3::preorder(const IR::Declaration_Instance* di) {
-    if (di->type->is<IR::Type_Specialized>()) {
-        auto tp = di->type->to<IR::Type_Specialized>();
-        builder->appendFormat(depth, "return z3_reg, %s(", tp->baseType->toString());
-        for (size_t i=0; i<di->arguments->size(); i++) {
-            const IR::Argument* const arg = di->arguments->at(i);
-            // std::cout << arg->name.name << std::endl;
-            if (auto cce = arg->expression->to<IR::ConstructorCallExpression>()) {
-                if (arg->name.name != nullptr)
-                    builder->appendFormat("%s=", arg->name.name);
-                builder->appendFormat("%s, ",
-                  cce->toString(), cce->toString());
-            } else {
-                BUG("Type %1% not supported!", arg->expression);
-            }
-        }
-        builder->append(")");
-        builder->newline();
-    } else if (di->type->is<IR::Type_Name>()){
-        visit(di->type);
-        builder->append("(p4_vars)");
-    } else {
-        BUG("Decl Instance type %1% not supported!", di);
+    builder->appendFormat(depth, "%s = ", di->name.name);
+
+    if (auto tp = di->type->to<IR::Type_Specialized>()) {
+        builder->append(tp->baseType->toString());
+    } else if (auto tn = di->type->to<IR::Type_Name>()) {
+        builder->append(tn->path->name.name);
     }
+
+
+    builder->append("(");
+    for (size_t i=0; i<di->arguments->size(); i++) {
+        const IR::Argument* const arg = di->arguments->at(i);
+        // std::cout << arg->name.name << std::endl;
+        if (auto cce = arg->expression->to<IR::ConstructorCallExpression>()) {
+            if (arg->name.name != nullptr)
+                builder->appendFormat("%s=", arg->name.name);
+            builder->appendFormat("%s, ",
+              cce->toString(), cce->toString());
+        } else {
+            BUG("Type %1% not supported!", arg->expression);
+        }
+    }
+    builder->append(")");
+    builder->newline();
+
     return false;
 }
 

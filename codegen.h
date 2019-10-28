@@ -231,7 +231,6 @@ public:
 
     /********************************************************************/
     /* Skip these types */
-    // bool preorder(const IR::Method*) override { return false; }
     bool preorder(const IR::Vector<IR::Argument>*) override { return false; }
 
     bool preorder(const IR::Type_Tuple*) override { return false; }
