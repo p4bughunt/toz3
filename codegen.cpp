@@ -45,34 +45,27 @@ bool CodeGenToz3::preorder(const IR::P4Control* c) {
          "(\"%s\", z3_reg.type(\"%s\")),\n", cp->name.name, cp->type->toString());
     }
     builder->append(depth, "]\n");
-
-    builder->appendFormat(depth, "def %s(input_args):\n", ctrl_name);
-
-    depth++;
-    builder->append(depth, "z3_reg.register_inouts(\"inouts\", input_args)\n\n");
-    builder->appendFormat(depth, "p4_vars = z3_reg.instance(\"\", z3_reg.type(\"inouts\"))\n\n", ctrl_name);
-    builder->appendFormat(depth, "p4_vars.add_externs(z3_reg._externs)\n");
+    builder->appendFormat(depth, "%s = P4Control()\n", ctrl_name);
+    builder->appendFormat(depth, "%s.add_args(%s_args)\n", ctrl_name, ctrl_name);
 
     /*
      * (1) Action
      * (2) Table
      */
-    builder->append(depth, "ctrl_body = BlockStatement()\n\n");
     for (auto a : c->controlLocals) {
             visit(a);
             if (a->is<IR::Declaration_Variable>())
-                builder->append(depth, "ctrl_body.add(stmt)\n");
+                builder->appendFormat(depth, "%s.apply.add(stmt)\n", ctrl_name);
+            else
+             builder->appendFormat(depth, "%s.declare_local(\"%s\", %s)\n", ctrl_name, a->name.name, a->name.name);
     }
 
     /*
      * (3) Apply Part
      */
-    builder->appendFormat(depth, "p4_vars.add_externs(z3_reg._externs)\n");
+    // builder->appendFormat(depth, "p4_vars.add_externs(z3_reg._externs)\n");
     visit(c->body);
-
-    builder->append(depth, "ctrl_body.add(stmt)\n");
-    builder->append(depth, "return ctrl_body.eval(p4_vars=p4_vars, expr_chain=[])\n\n");
-    depth--;
+    builder->appendFormat(depth, "%s.apply.add(stmt)\n", ctrl_name);
     return false;
 }
 
@@ -96,8 +89,6 @@ bool CodeGenToz3::preorder(const IR::P4Action* p4action) {
     ss << p4action->name.name << ".add_stmt(stmt)\n\n\n";
     builder->append(depth, ss.str());
     ss.str("");
-    ss << "z3_reg.register_extern(\"" << p4action->name.name << "\", " << p4action->name.name <<")\n\n";
-    builder->append(depth, ss.str());
     return false;
 }
 
@@ -111,9 +102,7 @@ bool CodeGenToz3::preorder(const IR::P4Table* p4table) {
         // IR::Property
         visit(p);
     }
-    ss.str("");
-    ss << "p4_vars.set_or_add_var(\"" << p4table->name.name << "\", " << p4table->name.name <<")\n\n";
-    builder->append(depth, ss.str());
+    // builder->append(depth, ss.str());
     return false;
 }
 
@@ -121,7 +110,7 @@ bool CodeGenToz3::preorder(const IR::Property* p) {
     // Tao: a trick here
     std::stringstream ss;
     if (p->name.name == "default_action") {
-        ss << tab_name << ".add_default(p4_vars, ";
+        ss << tab_name << ".add_default(";
         builder->append(depth, ss.str());
         visit(p->value);
         ss.str("");
@@ -143,7 +132,7 @@ bool CodeGenToz3::preorder(const IR::ActionList* acl) {
     std::stringstream ss;
     for (auto act : acl->actionList) {
         ss.str("");
-        ss << tab_name << ".add_action(p4_vars, ";
+        ss << tab_name << ".add_action(";
         builder->append(depth, ss.str());
         visit(act->expression);
         builder->append(")\n");
@@ -622,10 +611,9 @@ bool CodeGenToz3::preorder(const IR::SwitchStatement* ss) {
     builder->append(depth, "switch_block = SwitchStatement(");
 
     if_inswitchstmt = 1;
-    builder->append("p4_vars.get_var(\n");
     visit(ss->expression);
     if_inswitchstmt = 0;
-    builder->append("))\n");
+    builder->append(")\n");
 
     // switch case
     for (size_t i=0; i<ss->cases.size(); i++)
@@ -676,6 +664,22 @@ bool CodeGenToz3::preorder(const IR::Type_Header* t) {
     builder->appendFormat("%s]\n", builder->indent(depth));
     builder->appendFormat("%sz3_reg.register_header(\"%s\", z3_args)\n\n", builder->indent(depth), t->name.name);
 
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::Type_Package* t) {
+    builder->appendFormat(depth, "class %s():", t->getName().name);
+    builder->newline();
+    builder->append(depth+1, "def __init__(self, ");
+    for (auto cp : t->getConstructorParameters()->parameters)
+        builder->appendFormat("%s, ", cp->name.name);
+    builder->append("):");
+    builder->newline();
+    for (auto cp : t->getConstructorParameters()->parameters) {
+        builder->appendFormat(depth+2, "self.%s = %s",
+         cp->name.name, cp->name.name);
+        builder->newline();
+    }
     return false;
 }
 
@@ -746,20 +750,23 @@ bool CodeGenToz3::preorder(const IR::ArrayIndex* a) {
 bool CodeGenToz3::preorder(const IR::Declaration_Instance* di) {
     if (di->type->is<IR::Type_Specialized>()) {
         auto tp = di->type->to<IR::Type_Specialized>();
-        builder->appendFormat(depth, "return %s(", tp->baseType->toString());
+        builder->appendFormat(depth, "return z3_reg, %s(", tp->baseType->toString());
         for (size_t i=0; i<di->arguments->size(); i++) {
             const IR::Argument* const arg = di->arguments->at(i);
             // std::cout << arg->name.name << std::endl;
             if (auto cce = arg->expression->to<IR::ConstructorCallExpression>()) {
                 if (arg->name.name != nullptr)
                     builder->appendFormat("%s=", arg->name.name);
-                builder->appendFormat("(%s, %s_args), ",
+                builder->appendFormat("%s, ",
                   cce->toString(), cce->toString());
             } else {
                 BUG("Type %1% not supported!", arg->expression);
             }
         }
         builder->append(")");
+    } else if (di->type->is<IR::Type_Name>()){
+        visit(di->type);
+        builder->append("(p4_vars)");
     } else {
         BUG("Decl Instance type %1% not supported!", di);
     }

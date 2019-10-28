@@ -213,6 +213,7 @@ public:
         P4C_UNIMPLEMENTED("type %1% not supported", t);
         return false;
     }
+    bool preorder(const IR::Type_Package*) override;
     bool preorder(const IR::Type_Struct* t) override;
     bool preorder(const IR::Type_Header* t) override;
     bool preorder(const IR::Type_Typedef* t) override;
@@ -230,7 +231,7 @@ public:
 
     /********************************************************************/
     /* Skip these types */
-    bool preorder(const IR::Method*) override { return false; }
+    // bool preorder(const IR::Method*) override { return false; }
     bool preorder(const IR::Vector<IR::Argument>*) override { return false; }
 
     bool preorder(const IR::Type_Tuple*) override { return false; }
@@ -239,7 +240,6 @@ public:
     bool preorder(const IR::Type_Extern*) override { return false; }
     bool preorder(const IR::Type_Parser*) override { return false; }
     bool preorder(const IR::Type_Control*) override { return false; }
-    bool preorder(const IR::Type_Package*) override { return false; }
     bool preorder(const IR::Declaration*) override { return false; }
     bool preorder(const IR::TypeNameExpression*) override { return false; }
 
