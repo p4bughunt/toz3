@@ -62,7 +62,7 @@ bool CodeGenToz3::preorder(const IR::P4Control* c) {
     for (auto a : c->controlLocals) {
             visit(a);
             if (a->is<IR::Declaration_Variable>())
-                builder->appendFormat(depth, "%s.apply.add(stmt)", ctrl_name);
+                builder->appendFormat(depth, "%s.add_apply_stmt(stmt)", ctrl_name);
             else
              builder->appendFormat(depth, "%s.declare_local(\"%s\", %s)", ctrl_name, a->name.name, a->name.name);
          builder->newline();
@@ -75,7 +75,7 @@ bool CodeGenToz3::preorder(const IR::P4Control* c) {
     builder->appendFormat(depth, "###### CONTROL %s APPLY ######", ctrl_name);
     builder->newline();
     visit(c->body);
-    builder->appendFormat(depth, "%s.apply.add(stmt)", ctrl_name);
+    builder->appendFormat(depth, "%s.add_apply_stmt(stmt)", ctrl_name);
     builder->newline();
     builder->newline();
     return false;
@@ -553,26 +553,30 @@ bool CodeGenToz3::preorder(const IR::Slice* s) {
     builder->append(", ");
     visit(s->e1);
     // Tao: assume it always be integer constant
-    slice_l = con_val;
     builder->append(", ");
     visit(s->e2);
     // Tao: assume it always be integer constant
-    slice_r = con_val;
     builder->append(")");
     return false;
 }
 
-bool CodeGenToz3::preorder(const IR::Parameter* param) {
+bool CodeGenToz3::preorder(const IR::Parameter* p) {
     /*
-     * param->
+     * p->
      * (1) direction, inout, in, out
      * (2) type
      * (3) id for name
      */
+    if (p->direction == IR::Direction::Out ||
+        p->direction == IR::Direction::InOut)
+        builder->append("True, ");
+    else
+        builder->append("False, ");
+
     builder->append("\"");
-    builder->append(param->name);
+    builder->append(p->name);
     builder->append("\", ");
-    visit(param->type);
+    visit(p->type);
 
     return false;
 }
@@ -748,7 +752,8 @@ bool CodeGenToz3::preorder(const IR::Declaration_Instance* di) {
     }
 
 
-    builder->append("(");
+    if (di->arguments->size() > 0 )
+        builder->append("(");
     for (size_t i=0; i<di->arguments->size(); i++) {
         const IR::Argument* const arg = di->arguments->at(i);
         // std::cout << arg->name.name << std::endl;
@@ -761,7 +766,8 @@ bool CodeGenToz3::preorder(const IR::Declaration_Instance* di) {
             BUG("Type %1% not supported!", arg->expression);
         }
     }
-    builder->append(")");
+    if (di->arguments->size() > 0 )
+        builder->append(")");
     builder->newline();
 
     return false;

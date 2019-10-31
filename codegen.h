@@ -79,38 +79,21 @@ public:
     }
 };
 
-struct V1Switch {
-    cstring p;
-    cstring vr;
-    cstring ig;
-    cstring eg;
-    cstring ck;
-    cstring dep;
-};
-
 
 class CodeGenToz3 : public Inspector {
 protected:
 
+
+    //TODO: Get rid of all this global state
     // for table
     cstring tab_name;
-    // for action
-    cstring act_name;
-
-    // for slice op
-    int con_val = 0;
-    int slice_l = 0;
-    int slice_r = 0;
-
 
     // reserved keywords
     std::vector<std::string> key_words = {"action_run"};
 
-
     int if_keywords = 0;
     int if_stmtadd = 0;
     int if_inswitchstmt = 0;
-    struct V1Switch v1sw;
 
 public:
     int depth;
@@ -132,8 +115,6 @@ public:
     cstring emit() {
         return builder->emit();
     }
-
-
 
     bool preorder(const IR::Expression* expr) override {    P4C_UNIMPLEMENTED("expr %s: not yet supported",
          expr->node_type_name()); return false; }
@@ -230,10 +211,7 @@ public:
 
 
     /********************************************************************/
-    /* Skip these types */
-    bool preorder(const IR::Vector<IR::Argument>*) override { return false; }
-
-    bool preorder(const IR::Type_Tuple*) override { return false; }
+    /* Skip these types for now*/
     bool preorder(const IR::Type_Error*) override { return false; }
     bool preorder(const IR::Type_Enum*) override { return false; }
     bool preorder(const IR::Type_Extern*) override { return false; }
