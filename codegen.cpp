@@ -20,18 +20,25 @@ void CodeGenToz3::end_apply(const IR::Node *) {
 
 
 bool CodeGenToz3::preorder(const IR::P4Parser* p) {
-    auto parser_name = p->name.name;
 
+
+    auto parser_name = p->name.name;
+    builder->appendFormat(depth, "###### PARSER %s ######", parser_name);
+    builder->newline();
     // output header
     builder->appendFormat(depth, "%s_args = [\n", parser_name);
-    for (auto cp : p->getApplyParameters()->parameters) {
-        builder->appendFormat(depth+1,
-         "(\"%s\", z3_reg.type(\"%s\")),\n", cp->name.name, cp->type->toString());
-    }
+    // for (auto cp : p->getApplyParameters()->parameters) {
+    //     builder->append(depth+1,"(");
+    //     visit(cp);
+    //     builder->append("),");
+    //     builder->newline();
+    // }
     builder->append(depth, "]\n");
-
-    builder->appendFormat(depth, "def %s(p4_vars):\n", parser_name);
-    builder->append(depth+1, "pass\n");
+    builder->appendFormat(depth, "%s = P4Parser()", parser_name);
+    builder->newline();
+    builder->appendFormat(depth, "%s.add_args(%s_args)", parser_name, parser_name);
+    builder->newline();
+    builder->newline();
 
     return false;
 }
@@ -44,8 +51,10 @@ bool CodeGenToz3::preorder(const IR::P4Control* c) {
     // output header
     builder->appendFormat(depth, "%s_args = [\n", ctrl_name);
     for (auto cp : c->getApplyParameters()->parameters) {
-        builder->appendFormat(depth+1,
-         "(\"%s\", z3_reg.type(\"%s\")),\n", cp->name.name, cp->type->toString());
+        builder->append(depth+1,"(");
+        visit(cp);
+        builder->append("),");
+        builder->newline();
     }
     builder->append(depth, "]\n");
     builder->appendFormat(depth, "%s = P4Control()", ctrl_name);
@@ -517,7 +526,8 @@ bool CodeGenToz3::preorder(const IR::Constant* c) {
     else if (c->type->is<IR::Type_InfInt>())
         builder->appendFormat("%d", c->value.get_ui());
     else
-        P4C_UNIMPLEMENTED("Constant type %1% not supported!", c);
+        FATAL_ERROR("Constant Node %s not implemented!",
+                    c->type->node_type_name());
     return false;
 }
 
@@ -763,7 +773,8 @@ bool CodeGenToz3::preorder(const IR::Declaration_Instance* di) {
             builder->appendFormat("%s, ",
               cce->toString(), cce->toString());
         } else {
-            BUG("Type %1% not supported!", arg->expression);
+            FATAL_ERROR("Declaration Node %s not implemented!",
+                        arg->expression->node_type_name());
         }
     }
     if (di->arguments->size() > 0 )

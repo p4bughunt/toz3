@@ -87,7 +87,7 @@ void emit_program_top(std::ostream* os) {
     *os << "from v1model import *\n\n";
 
     *os << "def p4_program(z3_reg):\n\n\n";
-    *os << TOZ3::indent(1) << "z3_reg = register(z3_reg)\n\n\n";
+    *os << TAO_INDENT <<"z3_reg = register(z3_reg)\n\n\n";
 
     os->flush();
 }

@@ -13,14 +13,6 @@
 
 namespace TOZ3 {
 
-static cstring indent(int dep) {
-    std::stringstream ss;
-    for (int i=0; i<dep; i++) {
-        ss << TAO_INDENT;
-    }
-    return ss.str();
-}
-
 
 class SourceBuilder {
 public:
@@ -101,9 +93,8 @@ public:
     SourceBuilder* builder = nullptr;
 
     CodeGenToz3(int dep, std::ostream* ostream) :
-                    depth(dep), outStream(ostream) {
+                 depth(dep), outStream(ostream) {
         visitDagOnce = false;
-
         builder = new SourceBuilder();
     }
 
@@ -112,34 +103,36 @@ public:
     void end_apply(const IR::Node* node) override;
 
 
-    cstring emit() {
-        return builder->emit();
+    cstring emit() { return builder->emit(); }
+
+        /***** Unimplemented *****/
+    bool gen_error(const IR::Node* expr) {
+        FATAL_ERROR("IR Node %s not implemented!", expr->node_type_name());
+        return false;
     }
 
-    bool preorder(const IR::Expression* expr) override {    P4C_UNIMPLEMENTED("expr %s: not yet supported",
-         expr->node_type_name()); return false; }
-    bool preorder(const IR::StatOrDecl* expr) override
-    {          P4C_UNIMPLEMENTED("expr %s: not yet supported",
-         expr->node_type_name()); return false; }
-    bool preorder(const IR::PropertyValue* expr) override
-    {          P4C_UNIMPLEMENTED("expr %s: not yet supported",
-         expr->node_type_name()); return false; }
-    bool preorder(const IR::Statement* expr) override
-    { P4C_UNIMPLEMENTED("expr %s: not yet supported",
-        expr->node_type_name()); return false; }
+    bool preorder(const IR::Expression* expr) override {
+         return gen_error(expr);
+    }
+    bool preorder(const IR::StatOrDecl* expr) override {
+         return gen_error(expr);
+    }
+    bool preorder(const IR::PropertyValue* expr) override {
+         return gen_error(expr);
+    }
+    bool preorder(const IR::Statement* expr) override {
+        return gen_error(expr);
+    }
+    bool preorder(const IR::TableProperties* expr) override {
+        return gen_error(expr);
+    }
+    bool preorder(const IR::Type* expr) override {
+        return gen_error(expr);
+    }
 
-    bool preorder(const IR::TableProperties* tbp) override
-    { BUG("tbp %1%: not supported", tbp); return false; }
 
 
-    bool preorder(const IR::P4Control* c) override;
-    bool preorder(const IR::P4Parser* p) override;
-    bool preorder(const IR::P4Action* p4action) override;
-    bool preorder(const IR::P4Table* p4table) override;
-    bool preorder(const IR::Declaration_Variable* dv) override;
-    bool preorder(const IR::Parameter* param) override;
-
-    // Statement
+    /***** Statements *****/
     bool preorder(const IR::BlockStatement* b) override;
     bool preorder(const IR::AssignmentStatement* as) override;
     bool preorder(const IR::MethodCallStatement* mcs) override;
@@ -147,7 +140,21 @@ public:
     bool preorder(const IR::SwitchStatement* ss) override;
     bool preorder(const IR::SwitchCase* sc) override;
 
-    // Expression
+    /***** Methods *****/
+    bool preorder(const IR::P4Control* c) override;
+    bool preorder(const IR::P4Parser* p) override;
+    bool preorder(const IR::P4Action* p4action) override;
+    bool preorder(const IR::Parameter* param) override;
+
+    /***** Tables *****/
+    bool preorder(const IR::P4Table* p4table) override;
+    bool preorder(const IR::Property* p) override;
+    bool preorder(const IR::ActionList* acl) override;
+    bool preorder(const IR::Key* key) override;
+    bool preorder(const IR::KeyElement* ke) override;
+    bool preorder(const IR::ExpressionValue* ev) override;
+
+    /***** Expressions *****/
     bool preorder(const IR::Member *m) override;
     bool preorder(const IR::PathExpression* p) override;
     bool preorder(const IR::DefaultExpression*) override;
@@ -160,7 +167,8 @@ public:
     bool preorder(const IR::Slice* s) override;
 
     // TODO: not all operations supported
-    // Fabian: We can implement a general solution here and just change the string
+    // Fabian: We can implement a general solution here
+    // and just change the string
     bool preorder(const IR::Neg* expr) override;
     bool preorder(const IR::Cmpl* expr) override;
     bool preorder(const IR::LNot* expr) override;
@@ -183,17 +191,8 @@ public:
     bool preorder(const IR::LAnd* expr) override;
     bool preorder(const IR::LOr* expr) override;
 
-    bool preorder(const IR::Property* p) override;
-    bool preorder(const IR::ActionList* acl) override;
-    bool preorder(const IR::Key* key) override;
-    bool preorder(const IR::KeyElement* ke) override;
-    bool preorder(const IR::ExpressionValue* ev) override;
 
-    /***** types *****/
-    bool preorder(const IR::Type* t) {
-        P4C_UNIMPLEMENTED("type %1% not supported", t);
-        return false;
-    }
+    /***** Types *****/
     bool preorder(const IR::Type_Package*) override;
     bool preorder(const IR::Type_Struct* t) override;
     bool preorder(const IR::Type_Header* t) override;
@@ -206,26 +205,24 @@ public:
     bool preorder(const IR::Type_InfInt*) override;
     bool preorder(const IR::ArrayIndex* a) override;
 
-    // declarations
+    /***** Declarations *****/
     bool preorder(const IR::Declaration_Instance* di) override;
+    bool preorder(const IR::Declaration_Variable* dv) override;
 
 
     /********************************************************************/
     /* Skip these types for now*/
     bool preorder(const IR::Type_Error*) override { return false; }
+    bool preorder(const IR::Declaration_ID*) override { return false; }
     bool preorder(const IR::Type_Enum*) override { return false; }
     bool preorder(const IR::Type_Extern*) override { return false; }
     bool preorder(const IR::Type_Parser*) override { return false; }
     bool preorder(const IR::Type_Control*) override { return false; }
-    bool preorder(const IR::Declaration*) override { return false; }
+    bool preorder(const IR::Method*) override { return false; }
     bool preorder(const IR::TypeNameExpression*) override { return false; }
 
 };
 
-
 } // namespace TOZ3
-
-
-
 
 #endif // _TOZ3_CODEGEN_H_
