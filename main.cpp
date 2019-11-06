@@ -26,7 +26,6 @@
 #define DEBUG 0
 #endif
 
-void emit_program_top(std::ostream* os);
 
 int main(int argc, char *const argv[]) {
     setup_gc_logging();
@@ -53,11 +52,6 @@ int main(int argc, char *const argv[]) {
         return 1;
     }
 
-    /*
-     * Tao: emit the header of the program
-     */
-    emit_program_top(ostream);
-
     auto hook = options.getDebugHook();
 
     const IR::P4Program *program = nullptr;
@@ -78,18 +72,6 @@ int main(int argc, char *const argv[]) {
     }
 
     return ::errorCount() > 0;
-}
-
-
-void emit_program_top(std::ostream* os) {
-
-    *os << "from p4z3.expressions import *\n\n";
-    *os << "from v1model import *\n\n";
-
-    *os << "def p4_program(z3_reg):\n\n\n";
-    *os << TAO_INDENT <<"z3_reg = register(z3_reg)\n\n\n";
-
-    os->flush();
 }
 
 // Tao: some code snippets

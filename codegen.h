@@ -7,10 +7,6 @@
 #include "ir/ir.h"
 #include "lib/sourceCodeBuilder.h"
 
-#ifndef TAO_INDENT
-#define TAO_INDENT "    "
-#endif
-
 namespace TOZ3 {
 
 
@@ -21,7 +17,7 @@ public:
     static cstring indent(int dep) {
         std::stringstream ss;
         for (int i=0; i<dep; i++) {
-            ss << TAO_INDENT;
+            ss << "    ";
         }
         return ss.str();
     }
@@ -111,26 +107,12 @@ public:
         return false;
     }
 
-    bool preorder(const IR::Expression* expr) override {
+    bool preorder(const IR::Node* expr) override {
          return gen_error(expr);
-    }
-    bool preorder(const IR::StatOrDecl* expr) override {
-         return gen_error(expr);
-    }
-    bool preorder(const IR::PropertyValue* expr) override {
-         return gen_error(expr);
-    }
-    bool preorder(const IR::Statement* expr) override {
-        return gen_error(expr);
-    }
-    bool preorder(const IR::TableProperties* expr) override {
-        return gen_error(expr);
-    }
-    bool preorder(const IR::Type* expr) override {
-        return gen_error(expr);
     }
 
 
+    bool preorder(const IR::P4Program*) override;
 
     /***** Statements *****/
     bool preorder(const IR::BlockStatement* b) override;
@@ -145,6 +127,7 @@ public:
     bool preorder(const IR::P4Parser* p) override;
     bool preorder(const IR::P4Action* p4action) override;
     bool preorder(const IR::Parameter* param) override;
+    bool preorder(const IR::Method*) override;
 
     /***** Tables *****/
     bool preorder(const IR::P4Table* p4table) override;
@@ -203,6 +186,7 @@ public:
     bool preorder(const IR::Type_Boolean* t) override;
     bool preorder(const IR::Type_Stack* t) override;
     bool preorder(const IR::Type_InfInt*) override;
+    bool preorder(const IR::Type_Extern*) override;
     bool preorder(const IR::ArrayIndex* a) override;
 
     /***** Declarations *****/
@@ -213,12 +197,13 @@ public:
     /********************************************************************/
     /* Skip these types for now*/
     bool preorder(const IR::Type_Error*) override { return false; }
+    bool preorder(const IR::Declaration_MatchKind*) override { return false; }
     bool preorder(const IR::Declaration_ID*) override { return false; }
     bool preorder(const IR::Type_Enum*) override { return false; }
-    bool preorder(const IR::Type_Extern*) override { return false; }
+    bool preorder(const IR::Type_Var*) override { return false; }
+    bool preorder(const IR::Type_String*) override { return false; }
     bool preorder(const IR::Type_Parser*) override { return false; }
     bool preorder(const IR::Type_Control*) override { return false; }
-    bool preorder(const IR::Method*) override { return false; }
     bool preorder(const IR::TypeNameExpression*) override { return false; }
 
 };

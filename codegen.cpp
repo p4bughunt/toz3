@@ -7,17 +7,47 @@ Visitor::profile_t CodeGenToz3::init_apply(const IR::Node* node) {
 }
 
 void CodeGenToz3::end_apply(const IR::Node *) {
-
     builder->appendFormat(depth, "return z3_reg, main");
     if (nullptr != outStream) {
         cstring res = builder->toString();
         *outStream << res.c_str();
         outStream->flush();
     }
-    else {
-    }
 }
 
+bool CodeGenToz3::preorder(const IR::P4Program* p) {
+    builder->append("from p4z3.expressions import *\n\n");
+    builder->newline();
+    builder->newline();
+    builder->append("def p4_program(z3_reg):");
+    builder->newline();
+    builder->append(depth, "###### HARDCODED ######");
+    builder->newline();
+    builder->append(depth, "z3_reg.register_typedef(\"error\", z3.BitVecSort(8))");
+    builder->newline();
+    builder->append(depth, "z3_reg.register_typedef(\"T\", z3.BitVecSort(1))");
+    builder->newline();
+    builder->append(depth, "z3_reg.register_typedef(\"O\", z3.BitVecSort(1))");
+    builder->newline();
+    builder->append(depth, "z3_reg.register_typedef(\"D\", z3.BitVecSort(1))");
+    builder->newline();
+    builder->append(depth, "z3_reg.register_typedef(\"M\", z3.BitVecSort(1))");
+    builder->newline();
+    builder->append(depth, "z3_reg.register_typedef(\"HashAlgorithm\", z3.BitVecSort(1))");
+    builder->newline();
+    builder->append(depth, "z3_reg.register_typedef(\"CloneType\", z3.BitVecSort(1))");
+    builder->newline();
+    builder->append(depth, "z3_reg.register_typedef(\"packet_in\", z3.BitVecSort(1))");
+    builder->newline();
+    builder->append(depth, "z3_reg.register_typedef(\"packet_out\", z3.BitVecSort(1))");
+    builder->newline();
+    builder->append(depth, "###### END HARDCODED ######");
+    builder->newline();
+    builder->newline();
+    for (auto o: p->objects)
+        visit(o);
+    return false;
+}
 
 bool CodeGenToz3::preorder(const IR::P4Parser* p) {
 
@@ -59,7 +89,7 @@ bool CodeGenToz3::preorder(const IR::P4Control* c) {
     builder->append(depth, "]\n");
     builder->appendFormat(depth, "%s = P4Control()", ctrl_name);
     builder->newline();
-    builder->appendFormat(depth, "%s.add_args(%s_args)", ctrl_name, ctrl_name);
+    builder->appendFormat(depth, "%s.add_instance(z3_reg, \"inouts\", %s_args)", ctrl_name, ctrl_name);
     builder->newline();
     builder->newline();
 
@@ -90,14 +120,59 @@ bool CodeGenToz3::preorder(const IR::P4Control* c) {
     return false;
 }
 
-bool CodeGenToz3::preorder(const IR::P4Action* p4action) {
-    builder->appendFormat(depth, "###### ACTION %s ######", p4action->name.name);
+
+bool CodeGenToz3::preorder(const IR::Type_Extern* t) {
+    auto extern_name = t->name.name;
+    builder->appendFormat(depth, "###### EXTERN %s ######", extern_name);
     builder->newline();
-    builder->appendFormat(depth, "%s = P4Action()", p4action->name.name);
+    builder->appendFormat(depth, "%s = P4Extern(\"%s\", z3_reg)", extern_name, extern_name);
+    builder->newline();
+    for (auto param : t->typeParameters->parameters) {
+        builder->appendFormat(depth, "%s.add_parameter(", extern_name);
+        visit(param);
+        builder->append(")");
+        builder->newline();
+    }
+    builder->appendFormat(depth, "z3_reg.register_extern(\"%s\", %s)",
+             extern_name, extern_name);
+    builder->newline();
+    builder->newline();
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::Method* t) {
+    auto method_name = t->name.name;
+    // skip assert, this causes python to break ha.
+    // TODO: FIX
+    if (method_name == "assert")
+        return false;
+
+    builder->appendFormat(depth, "###### METHOD %s ######", method_name);
+    builder->newline();
+    builder->appendFormat(depth, "%s = P4Extern(\"%s\", z3_reg)", method_name, method_name);
+    builder->newline();
+    for (auto param : t->getParameters()->parameters) {
+        builder->appendFormat(depth, "%s.add_parameter(", method_name);
+        visit(param);
+        builder->append(")");
+        builder->newline();
+    }
+    builder->appendFormat(depth, "z3_reg.register_extern(\"%s\", %s)",
+             method_name, method_name);
+    builder->newline();
+    builder->newline();
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::P4Action* p4action) {
+    auto action_name = p4action->name.name;
+    builder->appendFormat(depth, "###### ACTION %s ######", action_name);
+    builder->newline();
+    builder->appendFormat(depth, "%s = P4Action()", action_name);
     builder->newline();
 
     for (auto param : p4action->parameters->parameters) {
-        builder->appendFormat(depth, "%s.add_parameter(", p4action->name.name);
+        builder->appendFormat(depth, "%s.add_parameter(", action_name);
         visit(param);
         builder->append(")");
         builder->newline();
@@ -106,7 +181,10 @@ bool CodeGenToz3::preorder(const IR::P4Action* p4action) {
     // body BlockStatement
     visit(p4action->body);
 
-    builder->appendFormat(depth, "%s.add_stmt(stmt)", p4action->name.name);
+    builder->appendFormat(depth, "%s.add_stmt(stmt)", action_name);
+    builder->newline();
+    builder->appendFormat(depth, "z3_reg.register_extern(\"%s\", %s)",
+             action_name, action_name);
     builder->newline();
     return false;
 }
@@ -143,7 +221,11 @@ bool CodeGenToz3::preorder(const IR::Property* p) {
 
 bool CodeGenToz3::preorder(const IR::ActionList* acl) {
     // Tao: a trick here
-    for (auto act : acl->actionList) {
+    for (auto act: acl->actionList) {
+        for (const auto* anno : act->getAnnotations()->annotations) {
+            if (anno->name.name == "defaultonly")
+                continue;
+        }
         builder->appendFormat(depth, "%s.add_action(", tab_name);
         visit(act->expression);
         builder->append(")");
