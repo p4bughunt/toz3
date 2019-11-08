@@ -7,7 +7,6 @@ Visitor::profile_t CodeGenToz3::init_apply(const IR::Node* node) {
 }
 
 void CodeGenToz3::end_apply(const IR::Node *) {
-    builder->appendFormat(depth, "return z3_reg, main");
     if (nullptr != outStream) {
         cstring res = builder->toString();
         *outStream << res.c_str();
@@ -46,6 +45,7 @@ bool CodeGenToz3::preorder(const IR::P4Program* p) {
     builder->newline();
     for (auto o: p->objects)
         visit(o);
+    builder->appendFormat(depth, "return z3_reg, main");
     return false;
 }
 
@@ -259,7 +259,7 @@ bool CodeGenToz3::preorder(const IR::ExpressionValue* ev) {
 }
 
 bool CodeGenToz3::preorder(const IR::MethodCallExpression* mce) {
-    if (if_inswitchstmt == 0) {
+    if (!is_inswitchstmt) {
         builder->append("MethodCallExpr(");
         visit(mce->method);
         if (mce->arguments->size() != 0) {
@@ -272,9 +272,9 @@ bool CodeGenToz3::preorder(const IR::MethodCallExpression* mce) {
         builder->append(")");
     }
     else {
-        key_words.push_back("apply");
+        key_words.insert("apply");
         visit(mce->method);
-        key_words.pop_back();
+        key_words.erase("apply");
     }
 
     return false;
@@ -333,11 +333,6 @@ bool CodeGenToz3::preorder(const IR::AssignmentStatement* as) {
     }
     else {
         builder->append(depth, "stmt = AssignmentStatement(lval, rval)");
-        builder->newline();
-    }
-
-    if (if_stmtadd) {
-        builder->append(depth, "block.add(stmt)");
         builder->newline();
     }
     return false;
@@ -560,16 +555,14 @@ bool CodeGenToz3::preorder(const IR::LOr* expr) {
 bool CodeGenToz3::preorder(const IR::Member* m) {
 
     visit(m->expr);
-    if (std::find(key_words.begin(),
-                key_words.end(),
-                m->member.name) != key_words.end()) {
-        if_keywords = 1;
+
+    if (key_words.find(m->member.name) != key_words.end()) {
+        // if the name of the expression is a special keyword, skip it
+        return false;
+
     }
+    builder->appendFormat("\".%s\"",  m->member.name);
 
-    if (!if_keywords)
-        builder->appendFormat("\".%s\"",  m->member.name);
-
-    if_keywords = 0;
     return false;
 }
 
@@ -581,15 +574,11 @@ bool CodeGenToz3::preorder(const IR::DefaultExpression*) {
 
 bool CodeGenToz3::preorder(const IR::PathExpression* p) {
 
-    if (std::find(key_words.begin(),
-                key_words.end(),
-                p->path->asString()) != key_words.end()) {
-        // do nothing
-        if_keywords = 1;
+    if (key_words.find(p->path->asString()) != key_words.end()) {
+        // if the name of the expression is a special keyword, skip it
+        return false;
     }
-    else {
-        builder->appendFormat("\"%s\"", p->path->asString());
-    }
+    builder->appendFormat("\"%s\"", p->path->asString());
     return false;
 }
 
@@ -696,16 +685,14 @@ bool CodeGenToz3::preorder(const IR::Declaration_Variable* dv) {
 bool CodeGenToz3::preorder(const IR::SwitchStatement* ss) {
     builder->append(depth, "switch_block = SwitchStatement(");
 
-    if_inswitchstmt = 1;
+    is_inswitchstmt = true;
     visit(ss->expression);
-    if_inswitchstmt = 0;
+    is_inswitchstmt = false;
     builder->append(")\n");
 
     // switch case
     for (size_t i=0; i<ss->cases.size(); i++)
         visit(ss->cases.at(i));
-
-
     builder->append(depth, "stmt = switch_block\n\n");
 
 

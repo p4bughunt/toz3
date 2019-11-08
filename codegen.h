@@ -73,15 +73,13 @@ protected:
 
 
     //TODO: Get rid of all this global state
-    // for table
+
+    // table context
     cstring tab_name;
-
     // reserved keywords
-    std::vector<std::string> key_words = {"action_run"};
+    std::set<cstring> key_words = {"action_run"};
 
-    int if_keywords = 0;
-    int if_stmtadd = 0;
-    int if_inswitchstmt = 0;
+    bool is_inswitchstmt = 0;
 
 public:
     int depth;
@@ -94,21 +92,15 @@ public:
         builder = new SourceBuilder();
     }
 
-    // for initilization and ending
+    // for initialization and ending
     Visitor::profile_t init_apply(const IR::Node* node) override;
     void end_apply(const IR::Node* node) override;
-
-
     cstring emit() { return builder->emit(); }
 
-        /***** Unimplemented *****/
-    bool gen_error(const IR::Node* expr) {
-        FATAL_ERROR("IR Node %s not implemented!", expr->node_type_name());
-        return false;
-    }
 
+    /***** Unimplemented *****/
     bool preorder(const IR::Node* expr) override {
-         return gen_error(expr);
+        FATAL_ERROR("IR Node %s not implemented!", expr->node_type_name());
     }
 
 
