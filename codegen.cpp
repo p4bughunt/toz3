@@ -726,16 +726,105 @@ bool CodeGenToz3::preorder(const IR::SwitchCase* sc) {
     return false;
 }
 
-bool CodeGenToz3::preorder(const IR::Type_Header* t) {
 
-    builder->appendFormat("%sz3_args = [\n", builder->indent(depth));
+bool CodeGenToz3::preorder(const IR::Declaration_ID* di) {
+    builder->appendFormat("\"%s\"", di->name.name);
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::Type_Header* t) {
+    builder->append(depth, "z3_args = [");
+    builder->newline();
     for (auto f : t->fields) {
-        builder->appendFormat("%s(\'%s\', ", builder->indent(depth+1), f->name.name);
+        builder->appendFormat(depth+1, "(\"%s\", ", f->name.name);
         visit(f->type);
         builder->append("),\n");
     }
-    builder->appendFormat("%s]\n", builder->indent(depth));
-    builder->appendFormat("%sz3_reg.register_header(\"%s\", z3_args)\n\n", builder->indent(depth), t->name.name);
+    builder->appendFormat(depth, "]");
+    builder->newline();
+    builder->appendFormat(depth, "z3_reg.register_header(\"%s\", z3_args)",
+                        t->name.name);
+    builder->newline();
+    builder->newline();
+
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::Type_HeaderUnion* t) {
+    builder->append(depth, "z3_args = [");
+    builder->newline();
+    for (auto f : t->fields) {
+        builder->appendFormat(depth+1, "(\"%s\", ", f->name.name);
+        visit(f->type);
+        builder->append("),\n");
+    }
+    builder->appendFormat(depth, "]");
+    builder->newline();
+    builder->appendFormat(depth, "z3_reg.register_header(\"%s\", z3_args)",
+                        t->name.name);
+    builder->newline();
+    builder->newline();
+
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::Type_Struct* t) {
+    builder->append(depth, "z3_args = [");
+    builder->newline();
+    for (auto f : t->fields) {
+        builder->appendFormat(depth+1, "(\"%s\", ", f->name.name);
+        visit(f->type);
+        builder->append("),\n");
+    }
+    builder->appendFormat(depth, "]");
+    builder->newline();
+    builder->appendFormat(depth, "z3_reg.register_struct(\"%s\", z3_args)",
+                        t->name.name);
+    builder->newline();
+    builder->newline();
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::Type_Enum* t) {
+
+    builder->append(depth, "enum_args = [");
+    builder->newline();
+    for (auto m : t->members) {
+        builder->append(builder->indent(depth+1));
+        visit(m);
+        builder->append(",\n");
+    }
+    builder->appendFormat(depth, "]");
+    builder->newline();
+    builder->appendFormat(depth, "%s = z3.EnumSort(\"%s\", enum_args)",
+                        t->name.name, t->name.name);
+    builder->newline();
+    builder->appendFormat(depth, "z3_reg.register_enum(\"%s\", %s)",
+                        t->name.name, t->name.name);
+    builder->newline();
+    builder->newline();
+
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::Type_Error* t) {
+
+    builder->append(depth, "enum_args = [");
+    builder->newline();
+    for (auto m : t->members) {
+        builder->append(builder->indent(depth+1));
+        visit(m);
+        builder->append(",\n");
+    }
+    builder->appendFormat(depth, "]");
+    builder->newline();
+    builder->appendFormat(depth, "%s = z3.EnumSort(\"%s\", enum_args)",
+                        t->name.name, t->name.name);
+    builder->newline();
+    builder->appendFormat(depth, "z3_reg.register_enum(\"%s\", %s)",
+                        t->name.name, t->name.name);
+    builder->newline();
+    builder->newline();
 
     return false;
 }
@@ -757,19 +846,6 @@ bool CodeGenToz3::preorder(const IR::Type_Package* t) {
     return false;
 }
 
-bool CodeGenToz3::preorder(const IR::Type_Struct* t) {
-
-    builder->appendFormat("%sz3_args = [\n", builder->indent(depth));
-    for (auto f : t->fields) {
-        builder->appendFormat("%s(\'%s\', ", builder->indent(depth+1), f->name.name);
-        visit(f->type);
-        builder->append("),\n");
-    }
-    builder->appendFormat("%s]\n", builder->indent(depth));
-    builder->appendFormat("%sz3_reg.register_struct(\"%s\", z3_args)\n\n", builder->indent(depth), t->name.name);
-
-    return false;
-}
 
 bool CodeGenToz3::preorder(const IR::Type_Typedef* t) {
     builder->appendFormat("%sz3_reg.register_typedef(\"%s\", ", builder->indent(depth), t->name.name);

@@ -113,6 +113,7 @@ public:
     bool preorder(const IR::IfStatement* ifs) override;
     bool preorder(const IR::SwitchStatement* ss) override;
     bool preorder(const IR::SwitchCase* sc) override;
+    bool preorder(const IR::EmptyStatement*) override { return false; }
 
     /***** Methods *****/
     bool preorder(const IR::P4Control* c) override;
@@ -169,29 +170,32 @@ public:
 
     /***** Types *****/
     bool preorder(const IR::Type_Package*) override;
+
     bool preorder(const IR::Type_Struct* t) override;
+    bool preorder(const IR::Type_Stack* t) override;
     bool preorder(const IR::Type_Header* t) override;
+    bool preorder(const IR::Type_HeaderUnion*) override;
+    bool preorder(const IR::Type_Enum*) override;
+    bool preorder(const IR::Type_Error*) override;
+
+    bool preorder(const IR::Type_Extern*) override;
     bool preorder(const IR::Type_Typedef* t) override;
     bool preorder(const IR::Type_Bits* t) override;
     bool preorder(const IR::Type_Varbits* t) override;
     bool preorder(const IR::Type_Name* t) override;
     bool preorder(const IR::Type_Boolean* t) override;
-    bool preorder(const IR::Type_Stack* t) override;
     bool preorder(const IR::Type_InfInt*) override;
-    bool preorder(const IR::Type_Extern*) override;
     bool preorder(const IR::ArrayIndex* a) override;
 
     /***** Declarations *****/
     bool preorder(const IR::Declaration_Instance* di) override;
+    bool preorder(const IR::Declaration_ID* di) override;
     bool preorder(const IR::Declaration_Variable* dv) override;
 
 
     /********************************************************************/
     /* Skip these types for now*/
-    bool preorder(const IR::Type_Error*) override { return false; }
     bool preorder(const IR::Declaration_MatchKind*) override { return false; }
-    bool preorder(const IR::Declaration_ID*) override { return false; }
-    bool preorder(const IR::Type_Enum*) override { return false; }
     bool preorder(const IR::Type_Var*) override { return false; }
     bool preorder(const IR::Type_String*) override { return false; }
     bool preorder(const IR::Type_Parser*) override { return false; }
