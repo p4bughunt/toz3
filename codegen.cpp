@@ -235,6 +235,28 @@ bool CodeGenToz3::preorder(const IR::ActionList* acl) {
     return false;
 }
 
+bool CodeGenToz3::preorder(const IR::Entry* e) {
+    // Tao: a trick here
+    visit(e->keys);
+    builder->append(", ");
+    visit(e->action);
+    builder->newline();
+    return false;
+}
+
+
+bool CodeGenToz3::preorder(const IR::EntriesList* el) {
+    // Tao: a trick here
+    for (auto entry: el->entries) {
+        builder->appendFormat(depth, "%s.add_const_entry(", tab_name);
+        visit(entry);
+        builder->append(")");
+        builder->newline();
+    }
+    builder->newline();
+    return false;
+}
+
 bool CodeGenToz3::preorder(const IR::Key* key) {
     for (auto ke : key->keyElements) {
         builder->append(depth, "table_key = ");
@@ -750,6 +772,17 @@ bool CodeGenToz3::preorder(const IR::Type_Header* t) {
     return false;
 }
 
+bool CodeGenToz3::preorder(const IR::Mux* s) {
+    builder->append("P4Mux(");
+    visit(s->e0);
+    builder->append(", ");
+    visit(s->e1);
+    builder->append(", ");
+    visit(s->e2);
+    builder->append(")");
+    return false;
+}
+
 bool CodeGenToz3::preorder(const IR::Type_HeaderUnion* t) {
     builder->append(depth, "z3_args = [");
     builder->newline();
@@ -848,6 +881,13 @@ bool CodeGenToz3::preorder(const IR::Type_Package* t) {
 
 
 bool CodeGenToz3::preorder(const IR::Type_Typedef* t) {
+    builder->appendFormat("%sz3_reg.register_typedef(\"%s\", ", builder->indent(depth), t->name.name);
+    visit(t->type);
+    builder->appendFormat(")\n");
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::Type_Newtype* t) {
     builder->appendFormat("%sz3_reg.register_typedef(\"%s\", ", builder->indent(depth), t->name.name);
     visit(t->type);
     builder->appendFormat(")\n");

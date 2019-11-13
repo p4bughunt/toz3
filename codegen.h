@@ -126,6 +126,8 @@ public:
     bool preorder(const IR::P4Table* p4table) override;
     bool preorder(const IR::Property* p) override;
     bool preorder(const IR::ActionList* acl) override;
+    bool preorder(const IR::Entry* e) override;
+    bool preorder(const IR::EntriesList* el) override;
     bool preorder(const IR::Key* key) override;
     bool preorder(const IR::KeyElement* ke) override;
     bool preorder(const IR::ExpressionValue* ev) override;
@@ -166,6 +168,7 @@ public:
     bool preorder(const IR::BXor* expr) override;
     bool preorder(const IR::LAnd* expr) override;
     bool preorder(const IR::LOr* expr) override;
+    bool preorder(const IR::Mux*) override;
 
 
     /***** Types *****/
@@ -180,6 +183,7 @@ public:
 
     bool preorder(const IR::Type_Extern*) override;
     bool preorder(const IR::Type_Typedef* t) override;
+    bool preorder(const IR::Type_Newtype* t) override;
     bool preorder(const IR::Type_Bits* t) override;
     bool preorder(const IR::Type_Varbits* t) override;
     bool preorder(const IR::Type_Name* t) override;
