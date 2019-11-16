@@ -388,7 +388,7 @@ bool CodeGenToz3::preorder(const IR::IfStatement* ifs) {
     visit(ifs->ifTrue);
     builder->append(depth, "if_block.add_then_stmt(stmt)\n\n\n");
 
-    if (ifs->ifFalse != nullptr) {
+    if (ifs->ifFalse != nullptr  && !ifs->ifFalse->is<IR::EmptyStatement>()) {
         visit(ifs->ifFalse);
         builder->append(depth, "if_block.add_else_stmt(stmt)\n\n\n");
     }
