@@ -137,6 +137,7 @@ public:
     bool preorder(const IR::PathExpression* p) override;
     bool preorder(const IR::DefaultExpression*) override;
     bool preorder(const IR::ListExpression* le) override;
+    bool preorder(const IR::TypeNameExpression*) override;
     bool preorder(const IR::MethodCallExpression* mce) override;
     bool preorder(const IR::Constant* c) override;
     bool preorder(const IR::BoolLiteral* bl) override;
@@ -204,7 +205,6 @@ public:
     bool preorder(const IR::Type_String*) override { return false; }
     bool preorder(const IR::Type_Parser*) override { return false; }
     bool preorder(const IR::Type_Control*) override { return false; }
-    bool preorder(const IR::TypeNameExpression*) override { return false; }
 
 };
 

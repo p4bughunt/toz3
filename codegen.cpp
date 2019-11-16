@@ -22,27 +22,25 @@ bool CodeGenToz3::preorder(const IR::P4Program* p) {
     builder->newline();
     builder->append(depth, "###### HARDCODED ######");
     builder->newline();
-    builder->append(depth, "z3_reg.register_typedef(\"error\", z3.BitVecSort(8))");
+    builder->append(depth, "z3_reg.register_typedef(\"error\", "
+                           "z3.DeclareSort(\"error\"))");
     builder->newline();
-    builder->append(depth, "z3_reg.register_typedef(\"T\", z3.BitVecSort(1))");
+    builder->append(depth, "z3_reg.register_typedef(\"T\", "
+                           "z3.DeclareSort(\"T\"))");
     builder->newline();
-    builder->append(depth, "z3_reg.register_typedef(\"O\", z3.BitVecSort(1))");
+    builder->append(depth, "z3_reg.register_typedef(\"O\", "
+                           "z3.DeclareSort(\"O\"))");
     builder->newline();
-    builder->append(depth, "z3_reg.register_typedef(\"D\", z3.BitVecSort(1))");
+    builder->append(depth, "z3_reg.register_typedef(\"D\", "
+                           "z3.DeclareSort(\"D\"))");
     builder->newline();
-    builder->append(depth, "z3_reg.register_typedef(\"M\", z3.BitVecSort(1))");
-    builder->newline();
-    builder->append(depth, "z3_reg.register_typedef(\"HashAlgorithm\", z3.BitVecSort(1))");
-    builder->newline();
-    builder->append(depth, "z3_reg.register_typedef(\"CloneType\", z3.BitVecSort(1))");
-    builder->newline();
-    builder->append(depth, "z3_reg.register_typedef(\"packet_in\", z3.BitVecSort(1))");
-    builder->newline();
-    builder->append(depth, "z3_reg.register_typedef(\"packet_out\", z3.BitVecSort(1))");
+    builder->append(depth, "z3_reg.register_typedef(\"M\", "
+                           "z3.DeclareSort(\"M\"))");
     builder->newline();
     builder->append(depth, "###### END HARDCODED ######");
     builder->newline();
     builder->newline();
+    // Start to visit the actual AST objects
     for (auto o: p->objects)
         visit(o);
     builder->appendFormat(depth, "return z3_reg, main");
@@ -133,6 +131,12 @@ bool CodeGenToz3::preorder(const IR::Type_Extern* t) {
         builder->append(")");
         builder->newline();
     }
+    for (auto m : t->methods) {
+        visit(m);
+        builder->appendFormat(depth, "%s.add_parameter", extern_name);
+        builder->appendFormat("(\"%s\", %s)", m->name.name, m->name.name);
+        builder->newline();
+    }
     builder->appendFormat(depth, "z3_reg.register_extern(\"%s\", %s)",
              extern_name, extern_name);
     builder->newline();
@@ -157,7 +161,7 @@ bool CodeGenToz3::preorder(const IR::Method* t) {
         builder->append(")");
         builder->newline();
     }
-    builder->appendFormat(depth, "z3_reg.register_extern(\"%s\", %s)",
+    builder->appendFormat(depth, "z3_reg.register_method(\"%s\", %s)",
              method_name, method_name);
     builder->newline();
     builder->newline();
@@ -312,6 +316,11 @@ bool CodeGenToz3::preorder(const IR::ListExpression* le) {
         visit(e);
     }
     builder->append("]");
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::TypeNameExpression* t) {
+    builder->appendFormat("\"%s\"", t->typeName->path->name.name);
     return false;
 }
 
@@ -829,10 +838,7 @@ bool CodeGenToz3::preorder(const IR::Type_Enum* t) {
     }
     builder->appendFormat(depth, "]");
     builder->newline();
-    builder->appendFormat(depth, "%s = z3.EnumSort(\"%s\", enum_args)",
-                        t->name.name, t->name.name);
-    builder->newline();
-    builder->appendFormat(depth, "z3_reg.register_enum(\"%s\", %s)",
+    builder->appendFormat(depth, "z3_reg.register_enum(\"%s\", enum_args)",
                         t->name.name, t->name.name);
     builder->newline();
     builder->newline();
@@ -841,7 +847,7 @@ bool CodeGenToz3::preorder(const IR::Type_Enum* t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Error* t) {
-
+    /* We consider a type error to just be an enum */
     builder->append(depth, "enum_args = [");
     builder->newline();
     for (auto m : t->members) {
@@ -851,10 +857,7 @@ bool CodeGenToz3::preorder(const IR::Type_Error* t) {
     }
     builder->appendFormat(depth, "]");
     builder->newline();
-    builder->appendFormat(depth, "%s = z3.EnumSort(\"%s\", enum_args)",
-                        t->name.name, t->name.name);
-    builder->newline();
-    builder->appendFormat(depth, "z3_reg.register_enum(\"%s\", %s)",
+    builder->appendFormat(depth, "z3_reg.register_enum(\"%s\", enum_args)",
                         t->name.name, t->name.name);
     builder->newline();
     builder->newline();
