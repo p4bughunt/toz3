@@ -378,7 +378,11 @@ bool CodeGenToz3::preorder(const IR::MethodCallStatement* mcs) {
 }
 
 bool CodeGenToz3::preorder(const IR::IfStatement* ifs) {
-    builder->append(depth, "if_block = IfStatement()\n\n");
+
+    builder->append(depth, "def IF_BLOCK():\n");
+    depth++;
+    builder->append(depth, "if_block = IfStatement()\n");
+
     // basically, ifs->condition is an expression
     builder->append(depth, "condition = ");
     visit(ifs->condition);
@@ -393,7 +397,9 @@ bool CodeGenToz3::preorder(const IR::IfStatement* ifs) {
         builder->append(depth, "if_block.add_else_stmt(stmt)\n\n\n");
     }
 
-    builder->append(depth, "stmt = if_block\n");
+    depth--;
+    builder->append(depth+1, "return if_block\n");
+    builder->append(depth, "stmt = IF_BLOCK()\n\n");
 
     return false;
 }
@@ -714,6 +720,7 @@ bool CodeGenToz3::preorder(const IR::Declaration_Variable* dv) {
 }
 
 bool CodeGenToz3::preorder(const IR::SwitchStatement* ss) {
+    // TODO: This also should have context
     builder->append(depth, "switch_block = SwitchStatement(");
 
     is_inswitchstmt = true;
