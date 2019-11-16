@@ -344,6 +344,12 @@ bool CodeGenToz3::preorder(const IR::BlockStatement* b) {
     return false;
 }
 
+bool CodeGenToz3::preorder(const IR::EmptyStatement*) {
+    builder->append(depth, "stmt = P4Noop()");
+    builder->newline();
+    return false;
+}
+
 bool CodeGenToz3::preorder(const IR::AssignmentStatement* as) {
     builder->append(depth, "lval = ");
     // Tao: slice assignment

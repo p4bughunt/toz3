@@ -113,7 +113,7 @@ public:
     bool preorder(const IR::IfStatement* ifs) override;
     bool preorder(const IR::SwitchStatement* ss) override;
     bool preorder(const IR::SwitchCase* sc) override;
-    bool preorder(const IR::EmptyStatement*) override { return false; }
+    bool preorder(const IR::EmptyStatement*) override;
 
     /***** Methods *****/
     bool preorder(const IR::P4Control* c) override;
