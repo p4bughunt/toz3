@@ -31,7 +31,7 @@ public:
     }
 
     void append(cstring str) {
-        builder->appendFormat("%s", str);
+        builder->append(str);
     }
 
     void append(int dep, cstring str) {
@@ -47,7 +47,7 @@ public:
     }
 
     void appendFormat(int dep, const char* format, ...) {
-        builder->append(indent(dep));
+        append(indent(dep));
         va_list ap;
         va_start(ap, format);
         cstring str = Util::vprintf_format(format, ap);
@@ -55,11 +55,34 @@ public:
         append(str);
     }
 
-    void newline() {
-        builder->append("\n");
+    void delim_comment(const char* format, ...) {
+        append("######### ");
+        va_list ap;
+        va_start(ap, format);
+        cstring str = Util::vprintf_format(format, ap);
+        append(str);
+        va_end(ap);
+        append(" #########");
+        newline();
     }
+
+    void delim_comment(int dep, const char* format, ...) {
+        append(dep, "######### ");
+        va_list ap;
+        va_start(ap, format);
+        cstring str = Util::vprintf_format(format, ap);
+        append(str);
+        va_end(ap);
+        append(" #########");
+        newline();
+    }
+
+    void newline() {
+        append("\n");
+    }
+
     void newline(int dep) {
-        builder->appendFormat("%s\n", indent(dep));
+        appendFormat("%s\n", indent(dep));
     }
 
     cstring emit() {
@@ -145,9 +168,9 @@ public:
     bool preorder(const IR::Concat* c) override;
     bool preorder(const IR::Slice* s) override;
 
-    // TODO: not all operations supported
-    // Fabian: We can implement a general solution here
-    // and just change the string
+    void visit_unary(const IR::Operation_Unary*);
+    void visit_binary(const IR::Operation_Binary*);
+    void visit_ternary(const IR::Operation_Ternary*);
     bool preorder(const IR::Neg* expr) override;
     bool preorder(const IR::Cmpl* expr) override;
     bool preorder(const IR::LNot* expr) override;

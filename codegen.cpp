@@ -20,8 +20,7 @@ bool CodeGenToz3::preorder(const IR::P4Program* p) {
     builder->newline();
     builder->append("def p4_program(z3_reg):");
     builder->newline();
-    builder->append(depth, "###### HARDCODED ######");
-    builder->newline();
+    builder->delim_comment(depth, "HARDCODED");
     builder->append(depth, "z3_reg.register_typedef(\"error\", "
                            "z3.DeclareSort(\"error\"))");
     builder->newline();
@@ -37,8 +36,7 @@ bool CodeGenToz3::preorder(const IR::P4Program* p) {
     builder->append(depth, "z3_reg.register_typedef(\"M\", "
                            "z3.DeclareSort(\"M\"))");
     builder->newline();
-    builder->append(depth, "###### END HARDCODED ######");
-    builder->newline();
+    builder->delim_comment(depth, "END HARDCODED");
     builder->newline();
     // Start to visit the actual AST objects
     for (auto o: p->objects)
@@ -51,8 +49,7 @@ bool CodeGenToz3::preorder(const IR::P4Parser* p) {
 
 
     auto parser_name = p->name.name;
-    builder->appendFormat(depth, "###### PARSER %s ######", parser_name);
-    builder->newline();
+    builder->delim_comment(depth, "PARSER %s", parser_name);
     // output header
     builder->appendFormat(depth, "%s_args = [\n", parser_name);
     // for (auto cp : p->getApplyParameters()->parameters) {
@@ -66,6 +63,7 @@ bool CodeGenToz3::preorder(const IR::P4Parser* p) {
     builder->newline();
     builder->appendFormat(depth, "%s.add_args(%s_args)", parser_name, parser_name);
     builder->newline();
+    builder->delim_comment(depth, "END PARSER %s", parser_name);
     builder->newline();
 
     return false;
@@ -74,8 +72,7 @@ bool CodeGenToz3::preorder(const IR::P4Parser* p) {
 bool CodeGenToz3::preorder(const IR::P4Control* c) {
 
     auto ctrl_name = c->name.name;
-    builder->appendFormat(depth, "###### CONTROL %s ######", ctrl_name);
-    builder->newline();
+    builder->delim_comment(depth, "CONTROL %s", ctrl_name);
     // output header
     builder->appendFormat(depth, "%s_args = [\n", ctrl_name);
     for (auto cp : c->getApplyParameters()->parameters) {
@@ -109,11 +106,11 @@ bool CodeGenToz3::preorder(const IR::P4Control* c) {
     /*
      * (3) Apply Part
      */
-    builder->appendFormat(depth, "###### CONTROL %s APPLY ######", ctrl_name);
-    builder->newline();
+    builder->delim_comment(depth, "CONTROL %s APPLY", ctrl_name);
     visit(c->body);
     builder->appendFormat(depth, "%s.add_apply_stmt(stmt)", ctrl_name);
     builder->newline();
+    builder->delim_comment(depth, "END CONTROL %s", ctrl_name);
     builder->newline();
     return false;
 }
@@ -121,8 +118,7 @@ bool CodeGenToz3::preorder(const IR::P4Control* c) {
 
 bool CodeGenToz3::preorder(const IR::Type_Extern* t) {
     auto extern_name = t->name.name;
-    builder->appendFormat(depth, "###### EXTERN %s ######", extern_name);
-    builder->newline();
+    builder->delim_comment(depth, "EXTERN %s", extern_name);
     builder->appendFormat(depth, "%s = P4Extern(\"%s\", z3_reg)", extern_name, extern_name);
     builder->newline();
     for (auto param : t->typeParameters->parameters) {
@@ -140,6 +136,7 @@ bool CodeGenToz3::preorder(const IR::Type_Extern* t) {
     builder->appendFormat(depth, "z3_reg.register_extern(\"%s\", %s)",
              extern_name, extern_name);
     builder->newline();
+    builder->delim_comment(depth, "END EXTERN %s", extern_name);
     builder->newline();
     return false;
 }
@@ -151,8 +148,7 @@ bool CodeGenToz3::preorder(const IR::Method* t) {
     if (method_name == "assert")
         return false;
 
-    builder->appendFormat(depth, "###### METHOD %s ######", method_name);
-    builder->newline();
+    builder->delim_comment(depth, "METHOD %s ", method_name);
     builder->appendFormat(depth, "%s = P4Extern(\"%s\", z3_reg)", method_name, method_name);
     builder->newline();
     for (auto param : t->getParameters()->parameters) {
@@ -164,14 +160,14 @@ bool CodeGenToz3::preorder(const IR::Method* t) {
     builder->appendFormat(depth, "z3_reg.register_method(\"%s\", %s)",
              method_name, method_name);
     builder->newline();
+    builder->delim_comment(depth, "END METHOD %s", method_name);
     builder->newline();
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::P4Action* p4action) {
     auto action_name = p4action->name.name;
-    builder->appendFormat(depth, "###### ACTION %s ######", action_name);
-    builder->newline();
+    builder->delim_comment(depth, "ACTION %s", action_name);
     builder->appendFormat(depth, "%s = P4Action()", action_name);
     builder->newline();
 
@@ -190,19 +186,22 @@ bool CodeGenToz3::preorder(const IR::P4Action* p4action) {
     builder->appendFormat(depth, "z3_reg.register_extern(\"%s\", %s)",
              action_name, action_name);
     builder->newline();
+    builder->delim_comment(depth, "END ACTION %s", action_name);
+    builder->newline();
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::P4Table* p4table) {
     tab_name = p4table->name.name;
-    builder->appendFormat(depth, "###### TABLE %s ######", tab_name);
-    builder->newline();
+    builder->delim_comment(depth, "TABLE %s", tab_name);
     builder->appendFormat(depth, "%s = P4Table(\"%s\")", tab_name, tab_name);
     builder->newline();
     for (auto p : p4table->properties->properties) {
         // IR::Property
         visit(p);
     }
+    builder->delim_comment(depth, "END TABLE %s", tab_name);
+    builder->newline();
     return false;
 }
 
@@ -326,20 +325,24 @@ bool CodeGenToz3::preorder(const IR::TypeNameExpression* t) {
 
 bool CodeGenToz3::preorder(const IR::BlockStatement* b) {
     // top part
-    builder->append(depth, "def BLOCK():\n");
-    builder->append(depth+1, "block = BlockStatement()\n");
-    // body part
+    builder->append(depth, "def BLOCK():");
+    builder->newline();
     depth++;
+    builder->append(depth, "block = BlockStatement()");
+    builder->newline();
+    // body part
     for (auto c : b->components) {
         visit(c);
-        builder->append(depth, "block.add(stmt)\n");
+        builder->append(depth, "block.add(stmt)");
+        builder->newline();
     }
+    // bot part
+    builder->append(depth, "return block");
+    builder->newline();
     depth--;
 
-    // bot part
+    builder->append(depth, "stmt = BLOCK()");
     builder->newline();
-    builder->append(depth+1, "return block\n\n");
-    builder->append(depth, "stmt = BLOCK()\n\n");
 
     return false;
 }
@@ -398,7 +401,7 @@ bool CodeGenToz3::preorder(const IR::IfStatement* ifs) {
     visit(ifs->ifTrue);
     builder->append(depth, "if_block.add_then_stmt(stmt)\n\n\n");
 
-    if (ifs->ifFalse != nullptr  && !ifs->ifFalse->is<IR::EmptyStatement>()) {
+    if (ifs->ifFalse != nullptr) {
         visit(ifs->ifFalse);
         builder->append(depth, "if_block.add_else_stmt(stmt)\n\n\n");
     }
@@ -410,187 +413,180 @@ bool CodeGenToz3::preorder(const IR::IfStatement* ifs) {
     return false;
 }
 
-bool CodeGenToz3::preorder(const IR::Neg* expr) {
-    builder->append("P4neg(");
+void CodeGenToz3::visit_unary(const IR::Operation_Unary* expr) {
+    builder->append("(");
     visit(expr->expr);
     builder->append(")");
+}
+
+void CodeGenToz3::visit_binary(const IR::Operation_Binary* expr) {
+    builder->append("(");
+    visit(expr->left);
+    builder->append(", ");
+    visit(expr->right);
+    builder->append(")");
+}
+
+void CodeGenToz3::visit_ternary(const IR::Operation_Ternary* expr) {
+    builder->append("(");
+    visit(expr->e0);
+    builder->append(", ");
+    visit(expr->e1);
+    builder->append(", ");
+    visit(expr->e2);
+    builder->append(")");
+}
+
+
+bool CodeGenToz3::preorder(const IR::Neg* expr) {
+    builder->append("P4neg");
+    visit_unary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Cmpl* expr) {
-    builder->append("P4inv(");
-    visit(expr->expr);
-    builder->append(")");
+    builder->append("P4inv");
+    visit_unary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::LNot* expr) {
-    builder->append("P4not(");
-    visit(expr->expr);
-    builder->append(")");
+    builder->append("P4not");
+    visit_unary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Mul* expr) {
-    builder->append("P4mul(");
-    visit(expr->left);
-    builder->append(", ");
-    visit(expr->right);
-    builder->append(")");
+    builder->append("P4mul");
+    visit_binary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Div* expr) {
-    builder->append("P4div(");
-    visit(expr->left);
-    builder->append(", ");
-    visit(expr->right);
-    builder->append(")");
+    builder->append("P4div");
+    visit_binary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Mod* expr) {
-    builder->append("P4mod(");
-    visit(expr->left);
-    builder->append(", ");
-    visit(expr->right);
-    builder->append(")");
+    builder->append("P4mod");
+    visit_binary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Add* expr) {
-    builder->append("P4add(");
-    visit(expr->left);
-    builder->append(", ");
-    visit(expr->right);
-    builder->append(")");
+    builder->append("P4add");
+    visit_binary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Sub* expr) {
-    builder->append("P4sub(");
-    visit(expr->left);
-    builder->append(", ");
-    visit(expr->right);
-    builder->append(")");
+    builder->append("P4sub");
+    visit_binary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Shl* expr) {
-    builder->append("P4lshift(");
-    visit(expr->left);
-    builder->append(", ");
-    visit(expr->right);
-    builder->append(")");
+    builder->append("P4lshift");
+    visit_binary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Shr* expr) {
-    builder->append("P4rshift(");
-    visit(expr->left);
-    builder->append(", ");
-    visit(expr->right);
-    builder->append(")");
+    builder->append("P4rshift");
+    visit_binary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Equ* expr) {
-    // a single line
-    builder->append("P4eq(");
-    visit(expr->left);
-    builder->append(", ");
-    visit(expr->right);
-    builder->append(")");
+    builder->append("P4eq");
+    visit_binary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Neq* expr) {
-    // a single line
-    builder->append("P4ne(");
-    visit(expr->left);
-    builder->append(", ");
-    visit(expr->right);
-    builder->append(")\n");
+    builder->append("P4ne");
+    visit_binary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Lss* expr) {
-    builder->append("P4lt(");
-    visit(expr->left);
-    builder->append(", ");
-    visit(expr->right);
-    builder->append(")");
+    builder->append("P4lt");
+    visit_binary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Leq* expr) {
-    builder->append("P4le(");
-    visit(expr->left);
-    builder->append(", ");
-    visit(expr->right);
-    builder->append(")");
+    builder->append("P4le");
+    visit_binary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Grt* expr) {
-    builder->append("P4gt(");
-    visit(expr->left);
-    builder->append(", ");
-    visit(expr->right);
-    builder->append(")");
+    builder->append("P4gt");
+    visit_binary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Geq* expr) {
-    builder->append("P4ge(");
-    visit(expr->left);
-    builder->append(", ");
-    visit(expr->right);
-    builder->append(")");
+    builder->append("P4ge");
+    visit_binary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::BAnd* expr) {
-    builder->append("P4band(");
-    visit(expr->left);
-    builder->append(", ");
-    visit(expr->right);
-    builder->append(")");
+    builder->append("P4band");
+    visit_binary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::BOr* expr) {
-    builder->append("P4bor(");
-    visit(expr->left);
-    builder->append(", ");
-    visit(expr->right);
-    builder->append(")");
+    builder->append("P4bor");
+    visit_binary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::BXor* expr) {
-    builder->append("P4xor(");
-    visit(expr->left);
-    builder->append(", ");
-    visit(expr->right);
-    builder->append(")");
+    builder->append("P4xor");
+    visit_binary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::LAnd* expr) {
-    builder->append("P4land(");
-    visit(expr->left);
-    builder->append(", ");
-    visit(expr->right);
-    builder->append(")");
+    builder->append("P4land");
+    visit_binary(expr);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::LOr* expr) {
-    builder->append("P4lor(");
-    visit(expr->left);
+    builder->append("P4lor");
+    visit_binary(expr);
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::Concat* expr) {
+    builder->append("P4Concat");
+    visit_binary(expr);
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::Slice* expr) {
+    builder->append("P4Slice");
+    visit_ternary(expr);
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::Mux* expr) {
+    builder->append("P4Mux");
+    visit_ternary(expr);
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::Cast* expr) {
+    builder->append("P4Cast(");
+    visit(expr->expr);
     builder->append(", ");
-    visit(expr->right);
+    visit(expr->destType);
     builder->append(")");
     return false;
 }
@@ -650,37 +646,6 @@ bool CodeGenToz3::preorder(const IR::BoolLiteral* bl) {
         builder->append("z3.BoolVal(True)");
     else
         builder->append("z3.BoolVal(False)");
-    return false;
-}
-
-bool CodeGenToz3::preorder(const IR::Cast* c) {
-    builder->append("P4Cast(");
-    visit(c->expr);
-    builder->append(", ");
-    visit(c->destType);
-    builder->append(")");
-    return false;
-}
-
-bool CodeGenToz3::preorder(const IR::Concat* c) {
-    builder->append("P4Concat(");
-    visit(c->left);
-    builder->append(", ");
-    visit(c->right);
-    builder->append(")");
-    return false;
-}
-
-bool CodeGenToz3::preorder(const IR::Slice* s) {
-    builder->append("P4Slice(");
-    visit(s->e0);
-    builder->append(", ");
-    visit(s->e1);
-    // Tao: assume it always be integer constant
-    builder->append(", ");
-    visit(s->e2);
-    // Tao: assume it always be integer constant
-    builder->append(")");
     return false;
 }
 
@@ -794,16 +759,6 @@ bool CodeGenToz3::preorder(const IR::Type_Header* t) {
     return false;
 }
 
-bool CodeGenToz3::preorder(const IR::Mux* s) {
-    builder->append("P4Mux(");
-    visit(s->e0);
-    builder->append(", ");
-    visit(s->e1);
-    builder->append(", ");
-    visit(s->e2);
-    builder->append(")");
-    return false;
-}
 
 bool CodeGenToz3::preorder(const IR::Type_HeaderUnion* t) {
     builder->append(depth, "z3_args = [");
