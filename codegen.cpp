@@ -50,24 +50,37 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
 
   builder->delim_comment(depth, "PARSER %s", parser_name);
 
+  builder->append(depth, "def PARSER():");
+  builder->newline();
+  depth++;
   // output header
   builder->appendFormat(depth, "%s_args = [\n", parser_name);
 
-  // for (auto cp : p->getApplyParameters()->parameters) {
-  //     builder->append(depth+1,"(");
-  //     visit(cp);
-  //     builder->append("),");
-  //     builder->newline();
-  // }
+  for (auto cp : p->getApplyParameters()->parameters) {
+    builder->append(depth + 1, "(");
+    visit(cp);
+    builder->append("),");
+    builder->newline();
+  }
   builder->append(depth, "]\n");
   builder->appendFormat(depth, "%s = P4Parser()", parser_name);
   builder->newline();
-  builder->appendFormat(depth, "%s.add_args(%s_args)", parser_name,
+  builder->appendFormat(depth,
+                        "%s.add_instance(z3_reg, \"inouts\", %s_args)",
+                        parser_name,
                         parser_name);
   builder->newline();
-  builder->delim_comment(depth, "END PARSER %s", parser_name);
   builder->newline();
 
+  builder->appendFormat(depth, "return %s", parser_name);
+  builder->newline();
+
+  depth--;
+  builder->appendFormat(depth, "%s = PARSER()", parser_name);
+  builder->newline();
+
+  builder->delim_comment(depth, "END PARSER %s", parser_name);
+  builder->newline();
   return false;
 }
 
@@ -875,19 +888,25 @@ bool CodeGenToz3::preorder(const IR::Type_Error *t) {
 bool CodeGenToz3::preorder(const IR::Type_Package *t) {
   builder->appendFormat(depth, "class %s():", t->getName().name);
   builder->newline();
-  builder->append(depth + 1, "def __init__(self, ");
+  depth++;
+  builder->append(depth, "def __init__(self, ");
 
   for (auto cp : t->getConstructorParameters()->parameters)
     builder->appendFormat("%s, ", cp->name.name);
   builder->append("):");
   builder->newline();
 
+  depth++;
+  builder->append(depth, "self.pipes = {}");
+  builder->newline();
   for (auto cp : t->getConstructorParameters()->parameters) {
-    builder->appendFormat(depth + 2, "self.%s = %s",
+    builder->appendFormat(depth, "self.pipes[\"%s\"] = %s",
                           cp->name.name, cp->name.name);
     builder->newline();
   }
   builder->newline();
+  depth--;
+  depth--;
   return false;
 }
 
