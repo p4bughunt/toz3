@@ -41,7 +41,7 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
   // Start to visit the actual AST objects
   for (auto o: p->objects)
     visit(o);
-  builder->appendFormat(depth, "return z3_reg, main");
+  builder->appendFormat(depth, "return main");
   return false;
 }
 
@@ -76,6 +76,9 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
 
   builder->delim_comment(depth, "CONTROL %s", ctrl_name);
 
+  builder->append(depth, "def CONTROL():");
+  builder->newline();
+  depth++;
   // output header
   builder->appendFormat(depth, "%s_args = [\n", ctrl_name);
 
@@ -122,6 +125,13 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
   visit(c->body);
   builder->appendFormat(depth, "%s.add_apply_stmt(stmt)", ctrl_name);
   builder->newline();
+  builder->appendFormat(depth, "return %s", ctrl_name);
+  builder->newline();
+
+  depth--;
+  builder->appendFormat(depth, "%s = CONTROL()", ctrl_name);
+  builder->newline();
+
   builder->delim_comment(depth, "END CONTROL %s", ctrl_name);
   builder->newline();
   return false;
@@ -146,7 +156,7 @@ bool CodeGenToz3::preorder(const IR::Type_Extern *t) {
 
   for (auto m : t->methods) {
     visit(m);
-    builder->appendFormat(depth,          "%s.add_parameter", extern_name);
+    builder->appendFormat(depth,"%s.add_method", extern_name);
     builder->appendFormat("(\"%s\", %s)", m->name.name,       m->name.name);
     builder->newline();
   }
@@ -654,8 +664,12 @@ bool CodeGenToz3::preorder(const IR::Constant *c) {
   if (auto tb = c->type->to<IR::Type_Bits>())
     builder->appendFormat("z3.BitVecVal(%s, %d)",
                           c->toString(), tb->size);
-  else if (c->type->is<IR::Type_InfInt>())
-    builder->appendFormat("%d", c->value.get_ui());
+  else if (c->type->is<IR::Type_InfInt>()) {
+
+    auto mpz_base = c->base;
+    auto str_val = c->value.get_str(mpz_base);
+    builder->appendFormat("%llu", c->asUint64());
+  }
   else
     FATAL_ERROR("Constant Node %s not implemented!",
                 c->type->node_type_name());
