@@ -76,7 +76,7 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
   builder->newline();
 
   depth--;
-  builder->appendFormat(depth, "%s = PARSER()", parser_name);
+  builder->appendFormat(depth, "%s = PARSER", parser_name);
   builder->newline();
 
   builder->delim_comment(depth, "END PARSER %s", parser_name);
@@ -142,7 +142,7 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
   builder->newline();
 
   depth--;
-  builder->appendFormat(depth, "%s = CONTROL()", ctrl_name);
+  builder->appendFormat(depth, "%s = CONTROL", ctrl_name);
   builder->newline();
 
   builder->delim_comment(depth, "END CONTROL %s", ctrl_name);
@@ -367,10 +367,6 @@ bool CodeGenToz3::preorder(const IR::ListExpression *le) {
   return false;
 }
 
-bool CodeGenToz3::preorder(const IR::TypeNameExpression *t) {
-  builder->appendFormat("\"%s\"", t->typeName->path->name.name);
-  return false;
-}
 
 bool CodeGenToz3::preorder(const IR::BlockStatement *b) {
   // top part
@@ -641,28 +637,62 @@ bool CodeGenToz3::preorder(const IR::Cast *expr) {
 }
 
 bool CodeGenToz3::preorder(const IR::Member *m) {
+  bool is_first = false;
+  if (!is_in_member)
+      is_first = true;
+  is_in_member = true;
   visit(m->expr);
 
-  if (key_words.find(m->member.name) != key_words.end()) {
+  if (!(key_words.find(m->member.name) != key_words.end())) {
+    // if the name of the expression is a special keyword, skip it
+    builder->appendFormat(".%s", m->member.name);
+  }
+  if (is_first)
+    builder->append("\"");
+  is_in_member = false;
+  return false;
+}
+
+
+bool CodeGenToz3::preorder(const IR::PathExpression *p) {
+  builder->append("\"");
+
+  if (key_words.find(p->path->asString()) != key_words.end()) {
     // if the name of the expression is a special keyword, skip it
     return false;
   }
-  builder->appendFormat("\".%s\"", m->member.name);
+  builder->appendFormat("%s", p->path->asString());
+  if (!is_in_member)
+    builder->append("\"");
 
+  return false;
+}
+
+bool CodeGenToz3::preorder(const IR::TypeNameExpression *t) {
+  builder->append("\"");
+  builder->appendFormat("%s", t->typeName->path->name.name);
+  if (!is_in_member)
+    builder->append("\"");
+
+  return false;
+}
+
+bool CodeGenToz3::preorder(const IR::ArrayIndex *a) {
+  bool is_first = false;
+  if (!is_in_member)
+      is_first = true;
+  is_in_member = true;
+  visit(a->left);
+  builder->append(".");
+  visit(a->right);
+  if (is_first)
+    builder->append("\"");
+  is_in_member = false;
   return false;
 }
 
 bool CodeGenToz3::preorder(const IR::DefaultExpression *) {
   builder->appendFormat("\"default\"");
-  return false;
-}
-
-bool CodeGenToz3::preorder(const IR::PathExpression *p) {
-  if (key_words.find(p->path->asString()) != key_words.end()) {
-    // if the name of the expression is a special keyword, skip it
-    return false;
-  }
-  builder->appendFormat("\"%s\"", p->path->asString());
   return false;
 }
 
@@ -679,8 +709,6 @@ bool CodeGenToz3::preorder(const IR::Constant *c) {
                           c->toString(), tb->size);
   else if (c->type->is<IR::Type_InfInt>()) {
 
-    auto mpz_base = c->base;
-    auto str_val = c->value.get_str(mpz_base);
     builder->appendFormat("%llu", c->asUint64());
   }
   else
@@ -959,13 +987,6 @@ bool CodeGenToz3::preorder(const IR::Type_InfInt *) {
   return false;
 }
 
-bool CodeGenToz3::preorder(const IR::ArrayIndex *a) {
-  visit(a->left);
-  builder->append("\".");
-  visit(a->right);
-  builder->append("\"");
-  return false;
-}
 
 // for V1Switch Declaration Instance
 bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {

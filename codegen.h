@@ -99,11 +99,13 @@ protected:
 
   // table context
   cstring tab_name;
+  // table context
 
   // reserved keywords
   std::set<cstring>key_words = { "action_run" };
 
-  bool is_inswitchstmt = 0;
+  bool is_inswitchstmt = false;
+  bool is_in_member = false;
 
 public:
 
