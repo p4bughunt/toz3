@@ -700,7 +700,7 @@ bool CodeGenToz3::preorder(const IR::TypeNameExpression *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::ConstructorCallExpression *cce) {
-    builder->appendFormat("%s, ", cce->toString(), cce->toString());
+    builder->appendFormat("%s", cce->toString());
     return false;
 }
 
@@ -1047,20 +1047,15 @@ bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
         builder->append(tn->path->name.name);
     }
 
-
-    if (di->arguments->size() > 0)
-        builder->append("(");
-
-    for (size_t i = 0; i < di->arguments->size(); i++) {
-        const IR::Argument *const arg = di->arguments->at(i);
-
+    builder->append("(");
+    for (auto arg: *di->arguments) {
         if (arg->name.name != nullptr)
             builder->appendFormat("%s=", arg->name.name);
         visit(arg->expression);
+        if (arg->expression != nullptr)
+            builder->append(", ");
     }
-
-    if (di->arguments->size() > 0)
-        builder->append(")");
+    builder->append(")");
     builder->newline();
 
     return false;
