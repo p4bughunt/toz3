@@ -143,6 +143,7 @@ public:
     bool preorder(const IR::SwitchCase *sc) override;
     bool preorder(const IR::EmptyStatement *) override;
     bool preorder(const IR::ExitStatement *) override;
+    bool preorder(const IR::ReturnStatement *) override;
 
     /***** Methods *****/
     bool preorder(const IR::P4Control *c) override;
@@ -230,6 +231,7 @@ public:
     bool preorder(const IR::Declaration_Instance *di) override;
     bool preorder(const IR::Declaration_ID *di) override;
     bool preorder(const IR::Declaration_Variable *dv) override;
+    bool preorder(const IR::Declaration_Constant *dv) override;
 
 
     /********************************************************************/

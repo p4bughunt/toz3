@@ -407,6 +407,14 @@ bool CodeGenToz3::preorder(const IR::ExitStatement *) {
     return false;
 }
 
+bool CodeGenToz3::preorder(const IR::ReturnStatement *) {
+    //TODO: Make this a proper return statement
+    builder->append(depth, "stmt = P4Exit()");
+    builder->newline();
+    return false;
+}
+
+
 bool CodeGenToz3::preorder(const IR::AssignmentStatement *as) {
     builder->append(depth, "lval = ");
 
@@ -795,6 +803,28 @@ bool CodeGenToz3::preorder(const IR::Parameter *p) {
     return false;
 }
 
+bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
+    builder->append(depth, "lval = \"");
+    builder->append(dc->name.name);
+    builder->append("\"\n");
+    builder->append(depth, "rval = ");
+
+    if (nullptr != dc->initializer)
+        visit(dc->initializer);
+    else {
+        builder->append("z3_reg.instance(\"");
+        builder->append(dc->name.name);
+        builder->append("\", ");
+        visit(dc->type);
+        builder->append(")");
+    }
+    builder->newline();
+    builder->append(depth, "stmt = P4Declaration(lval, rval)");
+    builder->newline();
+    return false;
+}
+
+
 bool CodeGenToz3::preorder(const IR::Declaration_Variable *dv) {
     builder->append(depth, "lval = \"");
     builder->append(dv->name.name);
@@ -811,7 +841,7 @@ bool CodeGenToz3::preorder(const IR::Declaration_Variable *dv) {
         builder->append(")");
     }
     builder->newline();
-    builder->append(depth, "stmt = P4Declaration(lval, rval)");
+    builder->append(depth, "stmt = AssignmentStatement(lval, rval)");
     builder->newline();
     return false;
 }
