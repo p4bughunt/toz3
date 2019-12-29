@@ -87,7 +87,7 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
 
 bool CodeGenToz3::preorder(const IR::P4Control *c) {
     auto ctrl_name = c->name.name;
-
+    is_in_control =true;
     builder->delim_comment(depth, "CONTROL %s", ctrl_name);
 
     builder->append(depth, "def CONTROL():");
@@ -149,6 +149,7 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
 
     builder->delim_comment(depth, "END CONTROL %s", ctrl_name);
     builder->newline();
+    is_in_control = false;
     return false;
 }
 
@@ -204,7 +205,7 @@ bool CodeGenToz3::preorder(const IR::Method *t) {
         builder->append(")");
         builder->newline();
     }
-    builder->appendFormat(depth, "z3_reg.register_method(\"%s\", %s)",
+    builder->appendFormat(depth, "z3_reg.register_global(\"%s\", %s)",
                           method_name, method_name);
     builder->newline();
     builder->delim_comment(depth, "END METHOD %s", method_name);
@@ -231,7 +232,7 @@ bool CodeGenToz3::preorder(const IR::P4Action *p4action) {
 
     builder->appendFormat(depth, "%s.add_stmt(stmt)", action_name);
     builder->newline();
-    builder->appendFormat(depth, "z3_reg.register_extern(\"%s\", %s)",
+    builder->appendFormat(depth, "z3_reg.register_global(\"%s\", %s)",
                           action_name, action_name);
     builder->newline();
     builder->delim_comment(depth, "END ACTION %s", action_name);
@@ -256,16 +257,16 @@ bool CodeGenToz3::preorder(const IR::P4Table *p4table) {
 
 bool CodeGenToz3::preorder(const IR::Property *p) {
     // Tao: a trick here
+    if ((table_skips.find(p->name.name) != table_skips.end()))
+        // skip it
+        return false;
+
     if (p->name.name == "default_action") {
         builder->appendFormat(depth, "%s.add_default(", tab_name);
         visit(p->value);
         builder->append(")");
         builder->newline();
-    }
-    else if (p->name.name == "size") {
-        // skip it
-    }
-    else {
+    } else {
         visit(p->value);
     }
     return false;
@@ -642,6 +643,13 @@ bool CodeGenToz3::preorder(const IR::Concat *expr) {
     return false;
 }
 
+bool CodeGenToz3::preorder(const IR::Mask *expr) {
+    builder->append("P4Mask");
+    visit_binary(expr);
+    return false;
+}
+
+
 bool CodeGenToz3::preorder(const IR::Slice *expr) {
     builder->append("P4Slice");
     visit_ternary(expr);
@@ -819,7 +827,10 @@ bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
         builder->append(")");
     }
     builder->newline();
-    builder->append(depth, "stmt = P4Declaration(lval, rval)");
+    if (is_in_control)
+        builder->append(depth, "stmt = P4Declaration(lval, rval)");
+    else
+        builder->append(depth, "z3_reg.register_global(lval, rval)");
     builder->newline();
     return false;
 }

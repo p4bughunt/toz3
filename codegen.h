@@ -104,9 +104,11 @@ protected:
 
     // reserved keywords
     std::set<cstring>key_words = { "action_run" };
+    std::set<cstring>table_skips = { "size", "meters", "counters" };
 
     bool is_inswitchstmt = false;
     bool is_in_member    = false;
+    bool is_in_control    = false;
 
 public:
 
@@ -174,9 +176,6 @@ public:
     bool preorder(const IR::MethodCallExpression *mce) override;
     bool preorder(const IR::Constant *c) override;
     bool preorder(const IR::BoolLiteral *bl) override;
-    bool preorder(const IR::Cast *c) override;
-    bool preorder(const IR::Concat *c) override;
-    bool preorder(const IR::Slice *s) override;
 
     void visit_unary(const IR::Operation_Unary *);
     void visit_binary(const IR::Operation_Binary *);
@@ -204,6 +203,10 @@ public:
     bool preorder(const IR::BXor *expr) override;
     bool preorder(const IR::LAnd *expr) override;
     bool preorder(const IR::LOr *expr) override;
+    bool preorder(const IR::Mask *) override;
+    bool preorder(const IR::Cast *c) override;
+    bool preorder(const IR::Concat *c) override;
+    bool preorder(const IR::Slice *s) override;
     bool preorder(const IR::Mux *) override;
 
 
