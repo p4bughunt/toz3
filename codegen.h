@@ -104,7 +104,7 @@ protected:
 
     // reserved keywords
     std::set<cstring>key_words = { "action_run" };
-    std::set<cstring>table_skips = { "size", "meters", "counters" };
+    std::set<cstring>table_skips = { "size", "meters", "counters", "implementation" };
 
     bool is_inswitchstmt = false;
     bool is_in_member    = false;

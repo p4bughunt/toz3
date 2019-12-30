@@ -672,36 +672,26 @@ bool CodeGenToz3::preorder(const IR::Cast *expr) {
 }
 
 bool CodeGenToz3::preorder(const IR::Member *m) {
-    bool is_first = false;
-
-    if (!is_in_member)
-        is_first = true;
-    is_in_member = true;
-    visit(m->expr);
-
-    if (!(key_words.find(m->member.name) != key_words.end())) {
-        // if the name of the expression is a special keyword, skip it
-        builder->appendFormat(".%s", m->member.name);
+    if ((key_words.find(m->member.name) != key_words.end())) {
+        // value is on ignore list, ignore the member and just follow the parent
+        visit(m->expr);
+        return false;
     }
-
-    if (is_first)
-        builder->append("\"");
-    is_in_member = false;
+    builder->append("P4Member(");
+    visit(m->expr);
+    builder->append(", ");
+    builder->appendFormat("\"%s\"", m->member.name);
+    builder->append(")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::PathExpression *p) {
-    builder->append("\"");
 
     if (key_words.find(p->path->asString()) != key_words.end()) {
         // if the name of the expression is a special keyword, skip it
         return false;
     }
-    builder->appendFormat("%s", p->path->asString());
-
-    if (!is_in_member)
-        builder->append("\"");
-
+    builder->appendFormat("\"%s\"", p->path->asString());
     return false;
 }
 
@@ -742,18 +732,11 @@ bool CodeGenToz3::preorder(const IR::StructInitializerExpression *sie) {
 }
 
 bool CodeGenToz3::preorder(const IR::ArrayIndex *a) {
-    bool is_first = false;
-
-    if (!is_in_member)
-        is_first = true;
-    is_in_member = true;
+    builder->append("P4Index(");
     visit(a->left);
-    builder->append(".");
+    builder->append(", ");
     visit(a->right);
-
-    if (is_first)
-        builder->append("\"");
-    is_in_member = false;
+    builder->append(")");
     return false;
 }
 
