@@ -1031,7 +1031,15 @@ bool CodeGenToz3::preorder(const IR::Type_Newtype *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Bits *t) {
-    builder->appendFormat("z3.BitVecSort(%d)", t->size);
+    builder->appendFormat("z3.BitVecSort(");
+    if (t->expression) {
+        visit(t->expression);
+        builder->append(".get_value()");
+    }
+    else
+        builder->appendFormat("%d", t->size);
+
+    builder->appendFormat(")");
     return false;
 }
 
@@ -1062,7 +1070,6 @@ bool CodeGenToz3::preorder(const IR::Type_InfInt *) {
     builder->append("z3.IntSort()");
     return false;
 }
-
 
 bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
     builder->appendFormat(depth, "%s_py = z3_reg.exec(", di->name.name);
