@@ -87,7 +87,7 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
 
 bool CodeGenToz3::preorder(const IR::P4Control *c) {
     auto ctrl_name = c->name.name;
-    is_in_control = true;
+    in_local_scope = true;
     builder->delim_comment(depth, "CONTROL %s", ctrl_name);
 
     builder->append(depth, "def CONTROL():");
@@ -144,10 +144,10 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
     builder->newline();
 
     depth--;
-    is_in_control = false;
-    builder->appendFormat(depth, "%s = CONTROL", ctrl_name);
+    in_local_scope = false;
+    builder->appendFormat(depth, "%s = CONTROL()", ctrl_name);
     builder->newline();
-    builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", CONTROL)",
+    builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", %s)",
                           ctrl_name, ctrl_name);
     builder->newline();
 
@@ -175,9 +175,18 @@ bool CodeGenToz3::preorder(const IR::Type_Extern *t) {
     }
 
     for (auto m : t->methods) {
+        // top part
+        in_local_scope = true;
+        builder->append(depth, "def INTERNAL_METHOD():");
+        builder->newline();
+        depth++;
         visit(m);
+        builder->appendFormat(depth, "return %s_py", m->name.name);
+        builder->newline();
+        in_local_scope = false;
+        depth--;
         builder->appendFormat(depth,          "%s_py.add_method", extern_name);
-        builder->appendFormat("(\"%s\", %s_py)", m->name.name,    m->name.name);
+        builder->appendFormat("(\"%s\", INTERNAL_METHOD())", m->name.name );
         builder->newline();
     }
     builder->appendFormat(depth, "z3_reg.register_extern(\"%s\", %s_py)",
@@ -204,13 +213,12 @@ bool CodeGenToz3::preorder(const IR::Method *t) {
         builder->append(")");
         builder->newline();
     }
-    if (!is_in_control) {
+    if (!in_local_scope) {
         builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", %s_py)",
                               method_name, method_name);
         builder->newline();
     }
     builder->delim_comment(depth, "END METHOD %s", method_name);
-    builder->newline();
     return false;
 }
 
@@ -233,7 +241,7 @@ bool CodeGenToz3::preorder(const IR::P4Action *p4action) {
 
     builder->appendFormat(depth, "%s_py.add_stmt(stmt)", action_name);
     builder->newline();
-    if (!is_in_control) {
+    if (!in_local_scope) {
         builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", %s_py)",
                               action_name, action_name);
         builder->newline();
@@ -813,7 +821,7 @@ bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
         builder->append(")");
     }
     builder->newline();
-    if (is_in_control)
+    if (in_local_scope)
         builder->append(depth, "stmt = P4Declaration(lval, rval)");
     else
         builder->append(depth, "z3_reg.declare_global(lval, rval)");

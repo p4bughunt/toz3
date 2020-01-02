@@ -108,7 +108,7 @@ protected:
 
     bool is_inswitchstmt = false;
     bool is_in_member    = false;
-    bool is_in_control    = false;
+    bool in_local_scope    = false;
 
 public:
 
