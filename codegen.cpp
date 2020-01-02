@@ -87,7 +87,7 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
 
 bool CodeGenToz3::preorder(const IR::P4Control *c) {
     auto ctrl_name = c->name.name;
-    is_in_control =true;
+    is_in_control = true;
     builder->delim_comment(depth, "CONTROL %s", ctrl_name);
 
     builder->append(depth, "def CONTROL():");
@@ -122,7 +122,7 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
         visit(a);
 
         if (a->is<IR::Declaration_Variable>())
-            builder->appendFormat(depth, "%s_py.add_apply_stmt(stmt)", ctrl_name);
+            builder->appendFormat(depth, "%s_py.add_stmt(stmt)", ctrl_name);
         else
             builder->appendFormat(depth,
                                   "%s_py.declare_local(\"%s\", %s_py)",
@@ -138,21 +138,22 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
      */
     builder->delim_comment(depth, "CONTROL %s APPLY", ctrl_name);
     visit(c->body);
-    builder->appendFormat(depth, "%s_py.add_apply_stmt(stmt)", ctrl_name);
+    builder->appendFormat(depth, "%s_py.add_stmt(stmt)", ctrl_name);
     builder->newline();
     builder->appendFormat(depth, "return %s_py", ctrl_name);
     builder->newline();
 
     depth--;
+    is_in_control = false;
     builder->appendFormat(depth, "%s = CONTROL", ctrl_name);
     builder->newline();
-    builder->appendFormat(depth, "z3_reg.register_global(\"%s\", CONTROL)",
+    builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", CONTROL)",
                           ctrl_name, ctrl_name);
     builder->newline();
 
     builder->delim_comment(depth, "END CONTROL %s", ctrl_name);
     builder->newline();
-    is_in_control = false;
+
     return false;
 }
 
@@ -203,9 +204,11 @@ bool CodeGenToz3::preorder(const IR::Method *t) {
         builder->append(")");
         builder->newline();
     }
-    builder->appendFormat(depth, "z3_reg.register_global(\"%s\", %s_py)",
-                          method_name, method_name);
-    builder->newline();
+    if (!is_in_control) {
+        builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", %s_py)",
+                              method_name, method_name);
+        builder->newline();
+    }
     builder->delim_comment(depth, "END METHOD %s", method_name);
     builder->newline();
     return false;
@@ -230,9 +233,11 @@ bool CodeGenToz3::preorder(const IR::P4Action *p4action) {
 
     builder->appendFormat(depth, "%s_py.add_stmt(stmt)", action_name);
     builder->newline();
-    builder->appendFormat(depth, "z3_reg.register_global(\"%s\", %s_py)",
-                          action_name, action_name);
-    builder->newline();
+    if (!is_in_control) {
+        builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", %s_py)",
+                              action_name, action_name);
+        builder->newline();
+    }
     builder->delim_comment(depth, "END ACTION %s", action_name);
     builder->newline();
     return false;
@@ -811,7 +816,7 @@ bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
     if (is_in_control)
         builder->append(depth, "stmt = P4Declaration(lval, rval)");
     else
-        builder->append(depth, "z3_reg.register_global(lval, rval)");
+        builder->append(depth, "z3_reg.declare_global(lval, rval)");
     builder->newline();
     return false;
 }
@@ -1008,7 +1013,7 @@ bool CodeGenToz3::preorder(const IR::Type_Package *t) {
     builder->newline();
     depth--;
     depth--;
-    builder->appendFormat(depth, "z3_reg.register_global(\"%s\", %s)",
+    builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", %s)",
                           t_name, t_name);
     builder->newline();
     return false;
