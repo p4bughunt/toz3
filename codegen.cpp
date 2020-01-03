@@ -730,14 +730,15 @@ bool CodeGenToz3::preorder(const IR::StructInitializerExpression *sie) {
 
     auto sie_name = sie->typeName->path->name.name;
     IR::IndexedVector<IR::NamedExpression> components;
-    builder->appendFormat("P4Initializer(z3_reg.instance(\"%s\", ", sie_name);
-    visit(sie->typeName);
-    builder->append("), [");
+    builder->appendFormat("P4Initializer(", sie_name);
+    builder->append("[");
     for (auto c : sie->components) {
         visit(c);
       builder->append(", ");
     }
-    builder->append("])");
+    builder->appendFormat("], z3_reg.instance(\"%s\", ", sie_name);
+    visit(sie->typeName);
+    builder->append("))");
 
     return false;
 }
