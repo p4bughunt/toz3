@@ -77,7 +77,7 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     builder->newline();
 
     depth--;
-    builder->appendFormat(depth, "%s = PARSER", parser_name);
+    builder->appendFormat(depth, "%s = PARSER()", parser_name);
     builder->newline();
 
     builder->delim_comment(depth, "END PARSER %s", parser_name);
@@ -730,9 +730,9 @@ bool CodeGenToz3::preorder(const IR::StructInitializerExpression *sie) {
 
     auto sie_name = sie->typeName->path->name.name;
     IR::IndexedVector<IR::NamedExpression> components;
-    builder->appendFormat("P4StructInitializer(z3_reg, \"%s\", ", sie_name);
+    builder->appendFormat("P4Initializer(z3_reg.instance(\"%s\", ", sie_name);
     visit(sie->typeName);
-    builder->append(", [");
+    builder->append("), [");
     for (auto c : sie->components) {
         visit(c);
       builder->append(", ");
@@ -836,14 +836,18 @@ bool CodeGenToz3::preorder(const IR::Declaration_Variable *dv) {
     builder->append("\"\n");
     builder->append(depth, "rval = ");
 
-    if (nullptr != dv->initializer)
+    if (dv->initializer) {
+        builder->append("P4Initializer(");
         visit(dv->initializer);
-    else {
-        builder->append("z3_reg.instance(\"");
-        builder->append(dv->name.name);
-        builder->append("\", ");
-        visit(dv->type);
-        builder->append(")");
+        builder->append(", ");
+    }
+    builder->append("z3_reg.instance(\"");
+    builder->append(dv->name.name);
+    builder->append("\", ");
+    visit(dv->type);
+    builder->append(")");
+    if (dv->initializer) {
+       builder->append(")");
     }
     builder->newline();
     builder->append(depth, "stmt = AssignmentStatement(lval, rval)");
