@@ -222,6 +222,33 @@ bool CodeGenToz3::preorder(const IR::Method *t) {
     return false;
 }
 
+bool CodeGenToz3::preorder(const IR::Function *function) {
+    auto function_name = function->name.name;
+
+    builder->delim_comment(depth, "FUNCTION %s", function_name);
+    builder->appendFormat(depth, "%s_py = function()", function_name);
+    builder->newline();
+
+    for (auto param : function->getParameters()->parameters) {
+        builder->appendFormat(depth, "%s_py.add_parameter(", function_name);
+        visit(param);
+        builder->append(")");
+        builder->newline();
+    }
+
+    // body BlockStatement
+    visit(function->body);
+
+    builder->appendFormat(depth, "%s_py.add_stmt(stmt)", function_name);
+    builder->newline();
+    builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", %s_py)",
+                          function_name, function_name);
+    builder->newline();
+    builder->delim_comment(depth, "END FUNCTION %s", function_name);
+    builder->newline();
+    return false;
+}
+
 bool CodeGenToz3::preorder(const IR::P4Action *p4action) {
     auto action_name = p4action->name.name;
 
@@ -419,13 +446,14 @@ bool CodeGenToz3::preorder(const IR::ExitStatement *) {
     return false;
 }
 
-bool CodeGenToz3::preorder(const IR::ReturnStatement *) {
+bool CodeGenToz3::preorder(const IR::ReturnStatement *r) {
     //TODO: Make this a proper return statement
-    builder->append(depth, "stmt = P4Exit()");
+    builder->append(depth, "stmt = P4Return(");
+    visit(r->expression);
+    builder->append(")");
     builder->newline();
     return false;
 }
-
 
 bool CodeGenToz3::preorder(const IR::AssignmentStatement *as) {
     builder->append(depth, "lval = ");

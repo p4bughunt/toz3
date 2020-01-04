@@ -153,6 +153,7 @@ public:
     bool preorder(const IR::P4Action *p4action) override;
     bool preorder(const IR::Parameter *param) override;
     bool preorder(const IR::Method *) override;
+    bool preorder(const IR::Function *) override;
 
     /***** Tables *****/
     bool preorder(const IR::P4Table *p4table) override;
