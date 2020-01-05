@@ -1133,9 +1133,11 @@ bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
     }
     builder->append(")");
     builder->newline();
-    builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", %s_py)",
-     di->name.name, di->name.name);
-    builder->newline();
+    if (!in_local_scope) {
+        builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", %s_py)",
+         di->name.name, di->name.name);
+        builder->newline();
+    }
 
     return false;
 }
