@@ -67,9 +67,8 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     builder->appendFormat(depth, "%s_py = P4Parser()", parser_name);
     builder->newline();
     builder->appendFormat(depth,
-                          "%s_py.add_instance(z3_reg, \"inouts\", %s_args)",
-                          parser_name,
-                          parser_name);
+                          "%s_py.add_instance(z3_reg, \"%s_state\", %s_args)",
+                          parser_name, parser_name, parser_name);
     builder->newline();
     builder->newline();
 
@@ -107,9 +106,8 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
     builder->appendFormat(depth, "%s_py = P4Control()", ctrl_name);
     builder->newline();
     builder->appendFormat(depth,
-                          "%s_py.add_instance(z3_reg, \"inouts\", %s_args)",
-                          ctrl_name,
-                          ctrl_name);
+                          "%s_py.add_instance(z3_reg, \"%s_state\", %s_args)",
+                          ctrl_name, ctrl_name, ctrl_name);
     builder->newline();
     builder->newline();
 
@@ -226,7 +224,7 @@ bool CodeGenToz3::preorder(const IR::Function *function) {
     auto function_name = function->name.name;
 
     builder->delim_comment(depth, "FUNCTION %s", function_name);
-    builder->appendFormat(depth, "%s_py = function()", function_name);
+    builder->appendFormat(depth, "%s_py = P4Action()", function_name);
     builder->newline();
 
     for (auto param : function->getParameters()->parameters) {
@@ -1134,6 +1132,9 @@ bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
             builder->append(", ");
     }
     builder->append(")");
+    builder->newline();
+    builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", %s_py)",
+     di->name.name, di->name.name);
     builder->newline();
 
     return false;
