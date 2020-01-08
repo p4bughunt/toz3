@@ -5,8 +5,10 @@
 #include "frontends/p4/parseAnnotations.h"
 #include "frontends/p4/validateParsedProgram.h"
 #include "frontends/p4/createBuiltins.h"
+#include "frontends/p4/directCalls.h"
 #include "frontends/p4/frontend.h"
 #include "frontends/p4/evaluator/evaluator.h"
+#include "frontends/common/constantFolding.h"
 
 #include "frontends/p4/fromv1.0/v1model.h"
 
@@ -58,6 +60,31 @@ int main(int argc, char *const argv[]) {
 
     program = P4::parseP4File(options);
 
+    const IR::ToplevelBlock* toplevel = nullptr;
+    P4::ReferenceMap refMap;
+    P4::TypeMap typeMap;
+    P4::ParseAnnotations parseAnnotations;
+    P4V1::V1Model&      v1model = P4V1::V1Model::instance;
+
+    PassManager passes = {
+        // Synthesize some built-in constructs
+        new P4::CreateBuiltins(),
+        new P4::ResolveReferences(&refMap, true),  // check shadowing
+        // First pass of constant folding, before types are known --
+        // may be needed to compute types.
+        new P4::ConstantFolding(&refMap, nullptr),
+        // Desugars direct parser and control applications
+        // into instantiations followed by application
+        new P4::InstantiateDirectCalls(&refMap),
+        // Type checking and type inference.  Also inserts
+        // explicit casts where implicit casts exist.
+        new P4::ResolveReferences(&refMap),  // check shadowing
+        new P4::TypeInference(&refMap, &typeMap, false),  // insert casts
+        };
+
+    // program = program->apply(passes);
+
+
     if (program != nullptr && ::errorCount() == 0) {
         try {
             P4::P4COptionPragmaParser optionsPragmaParser;
@@ -73,41 +100,3 @@ int main(int argc, char *const argv[]) {
 
     return ::errorCount() > 0;
 }
-
-// Tao: some code snippets
-/*******************************************************************/
-
-#if DEBUG
-    const IR::ToplevelBlock* toplevel = nullptr;
-    P4::ReferenceMap refMap;
-    P4::TypeMap typeMap;
-    P4::ParseAnnotations parseAnnotations;
-    P4V1::V1Model&      v1model = P4V1::V1Model::instance;
-
-            auto evaluator = new P4::EvaluatorPass(&refMap, &typeMap);
-            auto a = new P4::ResolveReferences(&refMap);
-            program = program->apply(*a);
-            LOG3(refMap);
-            auto b = new P4::TypeInference(&refMap, &typeMap, false);
-            program = program->apply(*b);
-            LOG3(typeMap);
-            PassManager passes = {
-                new P4::ParseAnnotationBodies(&parseAnnotations, &typeMap),
-                new P4::ValidateParsedProgram(),
-                new P4::CreateBuiltins(),
-                new P4::ResolveReferences(&refMap),
-                new P4::TypeInference(&refMap, &typeMap, false),
-                evaluator};
-
-            program = program->apply(passes);
-            LOG3(refMap);
-            LOG3(typeMap);
-            LOG3(evaluator->getToplevelBlock());
-
-            auto main = evaluator->getToplevelBlock()->getMain();
-            std::cout << main << std::endl;
-            auto ingress = main->findParameterValue(v1model.sw.ingress.name);
-            std::cout << ingress << std::endl;
-            auto ingress_name = ingress->to<IR::ControlBlock>()->container->name;
-            std::cout << ingress_name << std::endl;
-#endif

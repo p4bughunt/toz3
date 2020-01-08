@@ -214,6 +214,7 @@ public:
     /***** Types *****/
     bool preorder(const IR::Type_Package *) override;
 
+    void emit_args(const IR::Type_StructLike *t);
     bool preorder(const IR::Type_Struct *t) override;
     bool preorder(const IR::Type_Stack *t) override;
     bool preorder(const IR::Type_Header *t) override;

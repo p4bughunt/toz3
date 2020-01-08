@@ -20,9 +20,6 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
     builder->append("def p4_program(z3_reg):");
     builder->newline();
     builder->delim_comment(depth, "HARDCODED");
-    builder->append(depth, "z3_reg.register_typedef(\"error\", "
-                           "z3.DeclareSort(\"error\"))");
-    builder->newline();
     builder->append(depth, "z3_reg.register_typedef(\"T\", "
                            "z3.DeclareSort(\"T\"))");
     builder->newline();
@@ -39,8 +36,14 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
     builder->newline();
 
     // Start to visit the actual AST objects
-    for (auto o: p->objects)
+    for (auto o: p->objects) {
         visit(o);
+/*        if (auto t = o->to<IR::Type_Declaration>()) {
+            auto decl_name = t->name.name;
+            builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", %s_py)", decl_name, decl_name);
+            builder->newline();
+        }*/
+    }
     builder->appendFormat(depth, "return main_py");
     return false;
 }
@@ -896,7 +899,6 @@ bool CodeGenToz3::preorder(const IR::SwitchStatement *ss) {
         visit(ss->cases.at(i));
     builder->append(depth, "stmt = switch_block\n\n");
 
-
     return false;
 }
 
@@ -933,17 +935,20 @@ bool CodeGenToz3::preorder(const IR::Declaration_ID *di) {
     return false;
 }
 
-bool CodeGenToz3::preorder(const IR::Type_Header *t) {
+void CodeGenToz3::emit_args(const IR::Type_StructLike *t) {
     builder->append(depth, "z3_args = [");
+    for (auto f : t->fields) {
+        builder->appendFormat("(\"%s\", ", f->name.name);
+        visit(f->type);
+        builder->append("), ");
+    }
+    builder->append("]");
+}
+
+bool CodeGenToz3::preorder(const IR::Type_Header *t) {
+    emit_args(t);
     builder->newline();
 
-    for (auto f : t->fields) {
-        builder->appendFormat(depth + 1, "(\"%s\", ", f->name.name);
-        visit(f->type);
-        builder->append("),\n");
-    }
-    builder->appendFormat(depth, "]");
-    builder->newline();
     builder->appendFormat(depth, "z3_reg.register_header(\"%s\", z3_args)",
                           t->name.name);
     builder->newline();
@@ -953,16 +958,9 @@ bool CodeGenToz3::preorder(const IR::Type_Header *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_HeaderUnion *t) {
-    builder->append(depth, "z3_args = [");
+    emit_args(t);
     builder->newline();
 
-    for (auto f : t->fields) {
-        builder->appendFormat(depth + 1, "(\"%s\", ", f->name.name);
-        visit(f->type);
-        builder->append("),\n");
-    }
-    builder->appendFormat(depth, "]");
-    builder->newline();
     builder->appendFormat(depth, "z3_reg.register_header(\"%s\", z3_args)",
                           t->name.name);
     builder->newline();
@@ -972,16 +970,9 @@ bool CodeGenToz3::preorder(const IR::Type_HeaderUnion *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Struct *t) {
-    builder->append(depth, "z3_args = [");
+    emit_args(t);
     builder->newline();
 
-    for (auto f : t->fields) {
-        builder->appendFormat(depth + 1, "(\"%s\", ", f->name.name);
-        visit(f->type);
-        builder->append("),\n");
-    }
-    builder->appendFormat(depth, "]");
-    builder->newline();
     builder->appendFormat(depth, "z3_reg.register_struct(\"%s\", z3_args)",
                           t->name.name);
     builder->newline();
@@ -1059,16 +1050,16 @@ bool CodeGenToz3::preorder(const IR::Type_Package *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Typedef *t) {
-    builder->appendFormat("%sz3_reg.register_typedef(\"%s\", ",
-                          builder->indent(depth), t->name.name);
+    builder->appendFormat(depth, "z3_reg.register_typedef(\"%s\", ",
+        t->name.name);
     visit(t->type);
     builder->appendFormat(")\n");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Newtype *t) {
-    builder->appendFormat("%sz3_reg.register_typedef(\"%s\", ",
-                          builder->indent(depth), t->name.name);
+    builder->appendFormat(depth, "z3_reg.register_typedef(\"%s\", ",
+                          t->name.name);
     visit(t->type);
     builder->appendFormat(")\n");
     return false;
