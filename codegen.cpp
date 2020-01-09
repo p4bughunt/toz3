@@ -20,16 +20,16 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
     builder->append("def p4_program(z3_reg):");
     builder->newline();
     builder->delim_comment(depth, "HARDCODED");
-    builder->append(depth, "z3_reg.register_typedef(\"T\", "
+    builder->append(depth, "z3_reg.declare_global(\"typedef\", \"T\", "
                            "z3.DeclareSort(\"T\"))");
     builder->newline();
-    builder->append(depth, "z3_reg.register_typedef(\"O\", "
+    builder->append(depth, "z3_reg.declare_global(\"typedef\", \"O\", "
                            "z3.DeclareSort(\"O\"))");
     builder->newline();
-    builder->append(depth, "z3_reg.register_typedef(\"D\", "
+    builder->append(depth, "z3_reg.declare_global(\"typedef\", \"D\", "
                            "z3.DeclareSort(\"D\"))");
     builder->newline();
-    builder->append(depth, "z3_reg.register_typedef(\"M\", "
+    builder->append(depth, "z3_reg.declare_global(\"typedef\", \"M\", "
                            "z3.DeclareSort(\"M\"))");
     builder->newline();
     builder->delim_comment(depth, "END HARDCODED");
@@ -148,7 +148,7 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
     in_local_scope = false;
     builder->appendFormat(depth, "%s = CONTROL()", ctrl_name);
     builder->newline();
-    builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", %s)",
+    builder->appendFormat(depth, "z3_reg.declare_global(\"control\", \"%s\", %s)",
                           ctrl_name, ctrl_name);
     builder->newline();
 
@@ -190,7 +190,7 @@ bool CodeGenToz3::preorder(const IR::Type_Extern *t) {
         builder->appendFormat("(\"%s\", INTERNAL_METHOD())", m->name.name );
         builder->newline();
     }
-    builder->appendFormat(depth, "z3_reg.register_extern(\"%s\", %s_py)",
+    builder->appendFormat(depth, "z3_reg.declare_global(\"extern\", \"%s\", %s_py)",
                           extern_name, extern_name);
     builder->newline();
     builder->delim_comment(depth, "END EXTERN %s", extern_name);
@@ -215,7 +215,7 @@ bool CodeGenToz3::preorder(const IR::Method *t) {
         builder->newline();
     }
     if (!in_local_scope) {
-        builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", %s_py)",
+        builder->appendFormat(depth, "z3_reg.declare_global(\"method\", \"%s\", %s_py)",
                               method_name, method_name);
         builder->newline();
     }
@@ -242,7 +242,7 @@ bool CodeGenToz3::preorder(const IR::Function *function) {
 
     builder->appendFormat(depth, "%s_py.add_stmt(stmt)", function_name);
     builder->newline();
-    builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", %s_py)",
+    builder->appendFormat(depth, "z3_reg.declare_global(\"function\", \"%s\", %s_py)",
                           function_name, function_name);
     builder->newline();
     builder->delim_comment(depth, "END FUNCTION %s", function_name);
@@ -270,7 +270,7 @@ bool CodeGenToz3::preorder(const IR::P4Action *p4action) {
     builder->appendFormat(depth, "%s_py.add_stmt(stmt)", action_name);
     builder->newline();
     if (!in_local_scope) {
-        builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", %s_py)",
+        builder->appendFormat(depth, "z3_reg.declare_global(\"p4action\", \"%s\", %s_py)",
                               action_name, action_name);
         builder->newline();
     }
@@ -854,7 +854,7 @@ bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
     if (in_local_scope)
         builder->append(depth, "stmt = P4Declaration(lval, rval)");
     else
-        builder->append(depth, "z3_reg.declare_global(lval, rval)");
+        builder->append(depth, "z3_reg.declare_global(\"decl\", lval, rval)");
     builder->newline();
     return false;
 }
@@ -949,7 +949,7 @@ bool CodeGenToz3::preorder(const IR::Type_Header *t) {
     emit_args(t);
     builder->newline();
 
-    builder->appendFormat(depth, "z3_reg.register_header(\"%s\", z3_args)",
+    builder->appendFormat(depth, "z3_reg.declare_global(\"header\", \"%s\", z3_args)",
                           t->name.name);
     builder->newline();
     builder->newline();
@@ -961,7 +961,7 @@ bool CodeGenToz3::preorder(const IR::Type_HeaderUnion *t) {
     emit_args(t);
     builder->newline();
 
-    builder->appendFormat(depth, "z3_reg.register_header(\"%s\", z3_args)",
+    builder->appendFormat(depth, "z3_reg.declare_global(\"header\", \"%s\", z3_args)",
                           t->name.name);
     builder->newline();
     builder->newline();
@@ -973,7 +973,7 @@ bool CodeGenToz3::preorder(const IR::Type_Struct *t) {
     emit_args(t);
     builder->newline();
 
-    builder->appendFormat(depth, "z3_reg.register_struct(\"%s\", z3_args)",
+    builder->appendFormat(depth, "z3_reg.declare_global(\"struct\", \"%s\", z3_args)",
                           t->name.name);
     builder->newline();
     builder->newline();
@@ -991,7 +991,7 @@ bool CodeGenToz3::preorder(const IR::Type_Enum *t) {
     }
     builder->appendFormat(depth, "]");
     builder->newline();
-    builder->appendFormat(depth, "z3_reg.register_enum(\"%s\", enum_args)",
+    builder->appendFormat(depth, "z3_reg.declare_global(\"enum\", \"%s\", enum_args)",
                           t->name.name, t->name.name);
     builder->newline();
     builder->newline();
@@ -1011,7 +1011,7 @@ bool CodeGenToz3::preorder(const IR::Type_Error *t) {
     }
     builder->appendFormat(depth, "]");
     builder->newline();
-    builder->appendFormat(depth, "z3_reg.register_enum(\"%s\", enum_args)",
+    builder->appendFormat(depth, "z3_reg.declare_global(\"enum\", \"%s\", enum_args)",
                           t->name.name, t->name.name);
     builder->newline();
     builder->newline();
@@ -1043,14 +1043,14 @@ bool CodeGenToz3::preorder(const IR::Type_Package *t) {
     builder->newline();
     depth--;
     depth--;
-    builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", %s)",
+    builder->appendFormat(depth, "z3_reg.declare_global(\"package\", \"%s\", %s)",
                           t_name, t_name);
     builder->newline();
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Typedef *t) {
-    builder->appendFormat(depth, "z3_reg.register_typedef(\"%s\", ",
+    builder->appendFormat(depth, "z3_reg.declare_global(\"typedef\", \"%s\", ",
         t->name.name);
     visit(t->type);
     builder->appendFormat(")\n");
@@ -1058,7 +1058,7 @@ bool CodeGenToz3::preorder(const IR::Type_Typedef *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Newtype *t) {
-    builder->appendFormat(depth, "z3_reg.register_typedef(\"%s\", ",
+    builder->appendFormat(depth, "z3_reg.declare_global(\"typedef\", \"%s\", ",
                           t->name.name);
     visit(t->type);
     builder->appendFormat(")\n");
@@ -1125,7 +1125,7 @@ bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
     builder->append(")");
     builder->newline();
     if (!in_local_scope) {
-        builder->appendFormat(depth, "z3_reg.declare_global(\"%s\", %s_py)",
+        builder->appendFormat(depth, "z3_reg.declare_global(\"decl\", \"%s\", %s_py)",
          di->name.name, di->name.name);
         builder->newline();
     }
