@@ -817,15 +817,16 @@ bool CodeGenToz3::preorder(const IR::BoolLiteral *bl) {
 bool CodeGenToz3::preorder(const IR::Parameter *p) {
     /*
      * p->
-     * (1) direction, inout, in, out
+     * (1) direction, inout, out, in
      * (2) type
      * (3) id for name
      */
-    if ((p->direction == IR::Direction::Out) ||
-        (p->direction == IR::Direction::InOut))
-        builder->append("True, ");
+    if (p->direction == IR::Direction::InOut)
+        builder->append("\"inout\", ");
+    else if (p->direction == IR::Direction::Out)
+        builder->append("\"out\", ");
     else
-        builder->append("False, ");
+        builder->append("\"in\", ");
 
     builder->append("\"");
     builder->append(p->name);
