@@ -319,10 +319,15 @@ bool CodeGenToz3::preorder(const IR::Property *p) {
 bool CodeGenToz3::preorder(const IR::ActionList *acl) {
     // Tao: a trick here
     for (auto act: acl->actionList) {
+        bool ignore_default = false;
         for (const auto *anno : act->getAnnotations()->annotations) {
-            if (anno->name.name == "defaultonly")
-                continue;
+            if (anno->name.name == "defaultonly") {
+                ignore_default = true;
+            }
         }
+        if (ignore_default)
+            continue;
+
         builder->appendFormat(depth, "%s_py.add_action(", tab_name);
         visit(act->expression);
         builder->append(")");
