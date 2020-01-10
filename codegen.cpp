@@ -32,6 +32,9 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
     builder->append(depth, "z3_reg.declare_global(\"typedef\", \"M\", "
                            "z3.DeclareSort(\"M\"))");
     builder->newline();
+    builder->append(depth, "z3_reg.declare_global(\"typedef\", \"H\", "
+                           "z3.DeclareSort(\"H\"))");
+    builder->newline();
     builder->delim_comment(depth, "END HARDCODED");
     builder->newline();
 
@@ -61,9 +64,9 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     builder->appendFormat(depth, "%s_args = [\n", parser_name);
 
     for (auto cp : p->getApplyParameters()->parameters) {
-        builder->append(depth + 1, "(");
+        builder->append(depth + 1, "");
         visit(cp);
-        builder->append("),");
+        builder->append(",");
         builder->newline();
     }
     builder->append(depth, "]\n");
@@ -81,7 +84,9 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     depth--;
     builder->appendFormat(depth, "%s = PARSER()", parser_name);
     builder->newline();
-
+    builder->newline();
+    builder->appendFormat(depth, "z3_reg.declare_global(\"control\", \"%s\", %s)",
+                          parser_name, parser_name);
     builder->delim_comment(depth, "END PARSER %s", parser_name);
     builder->newline();
     return false;
@@ -746,7 +751,7 @@ bool CodeGenToz3::preorder(const IR::TypeNameExpression *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::ConstructorCallExpression *cce) {
-    builder->appendFormat("%s", cce->toString());
+    builder->appendFormat("\"%s\"", cce->toString());
     return false;
 }
 
@@ -821,6 +826,7 @@ bool CodeGenToz3::preorder(const IR::Parameter *p) {
      * (2) type
      * (3) id for name
      */
+    builder->append("(");
     if (p->direction == IR::Direction::InOut)
         builder->append("\"inout\", ");
     else if (p->direction == IR::Direction::Out)
@@ -832,6 +838,7 @@ bool CodeGenToz3::preorder(const IR::Parameter *p) {
     builder->append(p->name);
     builder->append("\", ");
     visit(p->type);
+    builder->append(")");
 
     return false;
 }
@@ -950,8 +957,7 @@ bool CodeGenToz3::preorder(const IR::Type_Header *t) {
     emit_args(t);
     builder->newline();
 
-    builder->appendFormat(depth, "z3_reg.declare_global(\"header\", \"%s\", z3_args)",
-                          t->name.name);
+    builder->appendFormat(depth, "z3_reg.declare_global(\"header\", \"%s\", z3_args)",                          t->name.name);
     builder->newline();
     builder->newline();
 
@@ -962,8 +968,7 @@ bool CodeGenToz3::preorder(const IR::Type_HeaderUnion *t) {
     emit_args(t);
     builder->newline();
 
-    builder->appendFormat(depth, "z3_reg.declare_global(\"header\", \"%s\", z3_args)",
-                          t->name.name);
+    builder->appendFormat(depth, "z3_reg.declare_global(\"header\", \"%s\", z3_args)",                          t->name.name);
     builder->newline();
     builder->newline();
 
@@ -1020,30 +1025,65 @@ bool CodeGenToz3::preorder(const IR::Type_Error *t) {
     return false;
 }
 
-bool CodeGenToz3::preorder(const IR::Type_Package *t) {
-    auto t_name = t->getName().name;
-    builder->appendFormat(depth, "class %s():", t_name);
-    builder->newline();
-    depth++;
-    builder->append(depth, "def __init__(self, ");
+bool CodeGenToz3::preorder(const IR::Type_Control *t) {
+    auto ctrl_name = t->name.name;
 
-    for (auto cp : t->getConstructorParameters()->parameters)
-        builder->appendFormat("%s, ", cp->name.name);
-    builder->append("):");
+    builder->delim_comment(depth, "CONTROL_TYPE %s", ctrl_name);
+    builder->appendFormat(depth,
+                          "%s_py = P4Extern(\"%s\", z3_reg)",
+                          ctrl_name,
+                          ctrl_name);
     builder->newline();
 
-    depth++;
-    builder->append(depth, "self.pipes = {}");
-    builder->newline();
-
-    for (auto cp : t->getConstructorParameters()->parameters) {
-        builder->appendFormat(depth, "self.pipes[\"%s\"] = %s",
-                              cp->name.name, cp->name.name);
+    for (auto param : t->applyParams->parameters) {
+        builder->appendFormat(depth, "%s_py.add_parameter(", ctrl_name);
+        visit(param);
+        builder->append(")");
         builder->newline();
     }
+    builder->appendFormat(depth, "z3_reg.declare_global(\"extern\", \"%s\", %s_py)",
+                          ctrl_name, ctrl_name);
     builder->newline();
-    depth--;
-    depth--;
+    builder->delim_comment(depth, "END CONTROL_TYPE %s", ctrl_name);
+    builder->newline();
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::Type_Parser *t) {
+    auto parser_name = t->name.name;
+
+    builder->delim_comment(depth, "PARSER_TYPE %s", parser_name);
+    builder->appendFormat(depth,
+                          "%s_py = P4Extern(\"%s\", z3_reg)",
+                          parser_name,
+                          parser_name);
+    builder->newline();
+
+    for (auto param : t->applyParams->parameters) {
+        builder->appendFormat(depth, "%s_py.add_parameter(", parser_name);
+        visit(param);
+        builder->append(")");
+        builder->newline();
+    }
+    builder->appendFormat(depth, "z3_reg.declare_global(\"extern\", \"%s\", %s_py)",
+                          parser_name, parser_name);
+    builder->newline();
+    builder->delim_comment(depth, "END PARSER_TYPE %s", parser_name);
+    builder->newline();
+    return false;
+}
+
+
+bool CodeGenToz3::preorder(const IR::Type_Package *t) {
+    auto t_name = t->getName().name;
+    builder->appendFormat(depth, "%s = P4Package(z3_reg, \"%s\", ", t_name, t_name);
+
+    for (auto cp : t->getConstructorParameters()->parameters) {
+        visit(cp);
+        builder->append(", ");
+    }
+    builder->append(")");
+    builder->newline();
     builder->appendFormat(depth, "z3_reg.declare_global(\"package\", \"%s\", %s)",
                           t_name, t_name);
     builder->newline();
@@ -1106,9 +1146,13 @@ bool CodeGenToz3::preorder(const IR::Type_InfInt *) {
     builder->append("z3.IntSort()");
     return false;
 }
+bool CodeGenToz3::preorder(const IR::Type_Specialized *t) {
+    builder->appendFormat("\"%s\"", t->baseType->toString());
+    return false;
+}
 
 bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
-    builder->appendFormat(depth, "%s_py = z3_reg.exec(", di->name.name);
+    builder->appendFormat(depth, "%s_py = P4Instance(z3_reg, ", di->name.name);
     if (auto tp = di->type->to<IR::Type_Specialized>()) {
         builder->appendFormat("\"%s\", ", tp->baseType->toString());
     } else if (auto tn = di->type->to<IR::Type_Name>()) {

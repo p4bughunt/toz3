@@ -221,6 +221,8 @@ public:
     bool preorder(const IR::Type_HeaderUnion *) override;
     bool preorder(const IR::Type_Enum *) override;
     bool preorder(const IR::Type_Error *) override;
+    bool preorder(const IR::Type_Parser *) override;
+    bool preorder(const IR::Type_Control *) override;
 
     bool preorder(const IR::Type_Extern *) override;
     bool preorder(const IR::Type_Typedef *t) override;
@@ -228,6 +230,7 @@ public:
     bool preorder(const IR::Type_Bits *t) override;
     bool preorder(const IR::Type_Varbits *t) override;
     bool preorder(const IR::Type_Name *t) override;
+    bool preorder(const IR::Type_Specialized *t) override;
     bool preorder(const IR::Type_Boolean *t) override;
     bool preorder(const IR::Type_InfInt *) override;
     bool preorder(const IR::ArrayIndex *a) override;
@@ -244,20 +247,10 @@ public:
     bool preorder(const IR::Declaration_MatchKind *) override {
         return false;
     }
-
     bool preorder(const IR::Type_Var *) override {
         return false;
     }
-
     bool preorder(const IR::Type_String *) override {
-        return false;
-    }
-
-    bool preorder(const IR::Type_Parser *) override {
-        return false;
-    }
-
-    bool preorder(const IR::Type_Control *) override {
         return false;
     }
 };
