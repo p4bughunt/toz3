@@ -152,6 +152,7 @@ public:
     bool preorder(const IR::P4Parser *p) override;
     bool preorder(const IR::P4Action *p4action) override;
     bool preorder(const IR::Parameter *param) override;
+    bool preorder(const IR::Argument *param) override;
     bool preorder(const IR::Method *) override;
     bool preorder(const IR::Function *) override;
 
@@ -232,7 +233,9 @@ public:
     bool preorder(const IR::Type_Name *t) override;
     bool preorder(const IR::Type_Specialized *t) override;
     bool preorder(const IR::Type_Boolean *t) override;
+    bool preorder(const IR::Type_Void *t) override;
     bool preorder(const IR::Type_InfInt *) override;
+    bool preorder(const IR::Type_String *) override;
     bool preorder(const IR::ArrayIndex *a) override;
 
     /***** Declarations *****/
@@ -248,9 +251,6 @@ public:
         return false;
     }
     bool preorder(const IR::Type_Var *) override {
-        return false;
-    }
-    bool preorder(const IR::Type_String *) override {
         return false;
     }
 };

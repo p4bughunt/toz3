@@ -47,7 +47,7 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
             builder->newline();
         }*/
     }
-    builder->appendFormat(depth, "return main_py");
+    builder->appendFormat(depth, "return main_py if \"main_py\" in locals() else None");
     return false;
 }
 
@@ -206,11 +206,13 @@ bool CodeGenToz3::preorder(const IR::Type_Extern *t) {
 bool CodeGenToz3::preorder(const IR::Method *t) {
     auto method_name = t->name.name;
 
-     builder->delim_comment(depth, "METHOD %s ", method_name);
+    builder->delim_comment(depth, "METHOD %s ", method_name);
     builder->appendFormat(depth,
-                          "%s_py = P4Extern(\"%s\", z3_reg)",
+                          "%s_py = P4Extern(\"%s\", z3_reg, ",
                           method_name,
                           method_name);
+    visit(t->type->returnType);
+    builder->append(")");
     builder->newline();
 
     for (auto param : t->getParameters()->parameters) {
@@ -385,13 +387,10 @@ bool CodeGenToz3::preorder(const IR::MethodCallExpression *mce) {
     if (!is_inswitchstmt) {
         builder->append("MethodCallExpr(");
         visit(mce->method);
-
-        if (mce->arguments->size() != 0) {
-            // output arguments
-            for (size_t i = 0; i < mce->arguments->size(); i++) {
-                builder->append(", ");
-                visit(mce->arguments->at(i)->expression);
-            }
+        builder->append(", ");
+        for (auto arg : *mce->arguments) {
+            visit(arg);
+            builder->append(", ");
         }
         builder->append(")");
     }
@@ -848,6 +847,16 @@ bool CodeGenToz3::preorder(const IR::Parameter *p) {
     return false;
 }
 
+bool CodeGenToz3::preorder(const IR::Argument *arg) {
+    if (arg->name)
+        builder->appendFormat("%s=", arg->name.name);
+
+    visit(arg->expression);
+
+    return false;
+}
+
+
 bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
     builder->append(depth, "lval = \"");
     builder->append(dc->name.name);
@@ -1128,6 +1137,17 @@ bool CodeGenToz3::preorder(const IR::Type_Boolean *) {
     builder->appendFormat("z3.BoolSort()");
     return false;
 }
+
+bool CodeGenToz3::preorder(const IR::Type_Void *) {
+    builder->appendFormat("None");
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::Type_String *) {
+    builder->appendFormat("z3.DeclareSort(\"string\")");
+    return false;
+}
+
 
 bool CodeGenToz3::preorder(const IR::Type_Varbits *t) { \
     ::warning("Replacing Varbit  %1% with Bitvector.", t);
