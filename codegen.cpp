@@ -32,8 +32,7 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
                 }*/
     }
     builder->appendFormat(depth,
-                          "return main_py if \"main_py\" in locals()
-                         else None");
+                        "return main_py if \"main_py\" in locals() else None");
     return false;
 }
 
