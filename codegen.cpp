@@ -1179,6 +1179,12 @@ bool CodeGenToz3::preorder(const IR::Type_Varbits *t) { \
     return false;
 }
 
+bool CodeGenToz3::preorder(const IR::Type_Tuple *t) {
+    ::warning("Using generic width bits for a tuple type.");
+    builder->appendFormat("z3.BitVecSort(%d)", t->width_bits());
+    return false;
+}
+
 bool CodeGenToz3::preorder(const IR::Type_Name *t) {
     builder->appendFormat("z3_reg.type(\"%s\")", t->path->name.name);
     return false;

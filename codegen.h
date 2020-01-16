@@ -103,12 +103,15 @@ protected:
     // table context
 
     // reserved keywords
-    std::set<cstring>key_words = { "action_run" };
-    std::set<cstring>table_skips = { "size", "meters", "counters", "implementation" };
+    std::set<cstring>key_words      = { "action_run" };
+    std::set<cstring>table_skips = {
+        "size", "meters", "counters",
+        "implementation", "psa_implementation",
+        "psa_direct_counter", "psa_direct_meter" };
 
     bool is_inswitchstmt = false;
     bool is_in_member    = false;
-    bool in_local_scope    = false;
+    bool in_local_scope  = false;
 
 public:
 
@@ -234,6 +237,7 @@ public:
     bool preorder(const IR::Type_Specialized *t) override;
     bool preorder(const IR::Type_Boolean *t) override;
     bool preorder(const IR::Type_Void *t) override;
+    bool preorder(const IR::Type_Tuple *t) override;
     bool preorder(const IR::Type_InfInt *) override;
     bool preorder(const IR::Type_String *) override;
     bool preorder(const IR::ArrayIndex *a) override;
@@ -250,6 +254,7 @@ public:
     bool preorder(const IR::Declaration_MatchKind *) override {
         return false;
     }
+
     bool preorder(const IR::Type_Var *) override {
         return false;
     }
