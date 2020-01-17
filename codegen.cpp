@@ -231,7 +231,9 @@ bool CodeGenToz3::preorder(const IR::Function *function) {
     auto function_name = function->name.name;
 
     builder->delim_comment(depth, "FUNCTION %s", function_name);
-    builder->appendFormat(depth, "%s_py = P4Action()", function_name);
+    builder->appendFormat(depth, "%s_py = P4Function(", function_name);
+    visit(function->type->returnType);
+    builder->append(")");
     builder->newline();
 
     for (auto param : function->getParameters()->parameters) {

@@ -107,7 +107,7 @@ protected:
     std::set<cstring>table_skips = {
         "size", "meters", "counters",
         "implementation", "psa_implementation",
-        "psa_direct_counter", "psa_direct_meter" };
+        "psa_direct_counter", "psa_direct_meter", "junk" };
 
     bool is_inswitchstmt = false;
     bool is_in_member    = false;
