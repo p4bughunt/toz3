@@ -474,27 +474,14 @@ bool CodeGenToz3::preorder(const IR::ReturnStatement *r) {
 
 bool CodeGenToz3::preorder(const IR::AssignmentStatement *as) {
     builder->append(depth, "lval = ");
-
-    // Tao: slice assignment
-    if (as->left->is<IR::Slice>())
-        visit(as->left->to<IR::Slice>()->e0);
-    else
-        visit(as->left);
+    visit(as->left);
     builder->newline();
     builder->append(depth, "rval = ");
     visit(as->right);
     builder->newline();
 
-    // Tao: slice assignment
-    if (auto sl = as->left->to<IR::Slice>()) {
-        builder->append(depth, "stmt = SliceAssignment(lval, rval, ");
-        builder->appendFormat("%d, %d)", sl->getH(), sl->getL());
-        builder->newline();
-    }
-    else {
-        builder->append(depth, "stmt = AssignmentStatement(lval, rval)");
-        builder->newline();
-    }
+    builder->append(depth, "stmt = AssignmentStatement(lval, rval)");
+    builder->newline();
     return false;
 }
 
