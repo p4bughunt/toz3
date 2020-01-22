@@ -66,11 +66,11 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     builder->newline();
 
     depth--;
-    builder->appendFormat(depth, "%s = PARSER()", parser_name);
+    builder->appendFormat(depth, "%s_py = PARSER()", parser_name);
     builder->newline();
     builder->newline();
     builder->appendFormat(depth,
-                          "z3_reg.declare_global(\"control\", \"%s\", %s)",
+                          "z3_reg.declare_global(\"control\", \"%s\", %s_py)",
                           parser_name,
                           parser_name);
     builder->delim_comment(depth, "END PARSER %s", parser_name);
@@ -135,10 +135,10 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
 
     depth--;
     in_local_scope = false;
-    builder->appendFormat(depth, "%s = CONTROL()", ctrl_name);
+    builder->appendFormat(depth, "%s_py = CONTROL()", ctrl_name);
     builder->newline();
     builder->appendFormat(depth,
-                          "z3_reg.declare_global(\"control\", \"%s\", %s)",
+                          "z3_reg.declare_global(\"control\", \"%s\", %s_py)",
                           ctrl_name,
                           ctrl_name);
     builder->newline();
