@@ -32,7 +32,7 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
                 }*/
     }
     builder->appendFormat(depth,
-                        "return main_py if \"main_py\" in locals() else None");
+                          "return main_py if \"main_py\" in locals() else None");
     return false;
 }
 
@@ -45,23 +45,22 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     builder->newline();
     depth++;
 
-    // output header
-    builder->appendFormat(depth, "%s_args = [\n", parser_name);
-
+    builder->appendFormat(depth, "%s_py = P4Parser(z3_reg, \"%s_state\", [",
+                          parser_name, parser_name);
     for (auto cp : p->getApplyParameters()->parameters) {
-        builder->append(depth + 1, "");
         visit(cp);
-        builder->append(",");
-        builder->newline();
+        builder->append(", ");
     }
-    builder->append(depth, "]\n");
-    builder->appendFormat(depth, "%s_py = P4Parser()", parser_name);
+    builder->append("], [");
+    for (auto cp : p->getConstructorParameters()->parameters) {
+        visit(cp);
+        builder->append(", ");
+    }
+    builder->append("])");
     builder->newline();
-    builder->appendFormat(depth,
-                          "%s_py.add_instance(z3_reg, \"%s_state\", %s_args)",
-                          parser_name, parser_name, parser_name);
     builder->newline();
-    builder->newline();
+
+    // TODO: MISSING IMPLEMENTATION
 
     builder->appendFormat(depth, "return %s_py", parser_name);
     builder->newline();
@@ -89,21 +88,18 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
     builder->newline();
     depth++;
 
-    // output header
-    builder->appendFormat(depth, "%s_args = [\n", ctrl_name);
-
+    builder->appendFormat(depth, "%s_py = P4Control(z3_reg, \"%s_state\", [",
+                          ctrl_name, ctrl_name);
     for (auto cp : c->getApplyParameters()->parameters) {
-        builder->append(depth + 1, "(");
         visit(cp);
-        builder->append("),");
-        builder->newline();
+        builder->append(", ");
     }
-    builder->append(depth, "]\n");
-    builder->appendFormat(depth, "%s_py = P4Control()", ctrl_name);
-    builder->newline();
-    builder->appendFormat(depth,
-                          "%s_py.add_instance(z3_reg, \"%s_state\", %s_args)",
-                          ctrl_name, ctrl_name, ctrl_name);
+    builder->append("], [");
+    for (auto cp : c->getConstructorParameters()->parameters) {
+        visit(cp);
+        builder->append(", ");
+    }
+    builder->append("])");
     builder->newline();
     builder->newline();
 
@@ -182,7 +178,7 @@ bool CodeGenToz3::preorder(const IR::Type_Extern *t) {
         in_local_scope = false;
         depth--;
         builder->appendFormat(depth,
-                                                             "%s_py.add_method",
+                              "%s_py.add_method",
                               extern_name);
         builder->appendFormat("(\"%s\", INTERNAL_METHOD())", m->name.name);
         builder->newline();
