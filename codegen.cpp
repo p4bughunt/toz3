@@ -39,6 +39,7 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
 bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     auto parser_name = p->name.name;
 
+    in_local_scope = true;
     builder->delim_comment(depth, "PARSER %s", parser_name);
 
     builder->append(depth, "def PARSER():");
@@ -47,11 +48,13 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
 
     builder->appendFormat(depth, "%s_py = P4Parser(z3_reg, \"%s_state\", [",
                           parser_name, parser_name);
+
     for (auto cp : p->getApplyParameters()->parameters) {
         visit(cp);
         builder->append(", ");
     }
     builder->append("], [");
+
     for (auto cp : p->getConstructorParameters()->parameters) {
         visit(cp);
         builder->append(", ");
@@ -60,23 +63,99 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     builder->newline();
     builder->newline();
 
-    // TODO: MISSING IMPLEMENTATION
+    /*
+     * (1) Action
+     * (2) Tables
+     * (3) Instance Declarations
+     */
+    // for (auto a : p->parserLocals) {
+    //     visit(a);
+    //     builder->appendFormat(depth,
+    //                           "%s_py.declare_local(\"%s\", %s_py)",
+    //                           parser_name,
+    //                           a->name.name,
+    //                           a->name.name);
+    //     builder->newline();
+    // }
 
+    /*
+     * (3) Apply Part
+     */
+    // builder->delim_comment(depth, "PARSER %s TREE", parser_name);
+
+    // builder->appendFormat(depth, "%s_parser = ParserTree()", parser_name);
+    // builder->newline();
+    // for (auto s : p->states) {
+    //     auto state_name = s->name.name;
+    //     visit(s);
+    //     builder->appendFormat(depth, "%s_parser.add_state(\"%s\", %s_state)", parser_name, state_name, state_name);
+    //     builder->newline();
+    // }
+    // builder->appendFormat(depth, "%s_py.add_stmt(%s_parser)",
+    //     parser_name, parser_name);
+    // builder->newline();
     builder->appendFormat(depth, "return %s_py", parser_name);
     builder->newline();
 
+
     depth--;
+    in_local_scope = false;
     builder->appendFormat(depth, "%s_py = PARSER()", parser_name);
-    builder->newline();
     builder->newline();
     builder->appendFormat(depth,
                           "z3_reg.declare_global(\"control\", \"%s\", %s_py)",
                           parser_name,
                           parser_name);
+    builder->newline();
+
     builder->delim_comment(depth, "END PARSER %s", parser_name);
+    builder->newline();
+
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::ParserState *ps) {
+    auto state_name = ps->name.name;
+    builder->appendFormat(depth, "%s_state = ParserState()", state_name);
+    builder->newline();
+    for (auto c : ps->components) {
+        visit(c);
+        builder->appendFormat(depth, "%s_state.add_stmt(stmt)", state_name);
+        builder->newline();
+    }
+    builder->append(depth, "select = ");
+    if (ps->selectExpression)
+        visit(ps->selectExpression);
+    else
+        builder->append("P4Exit()");
+
+    builder->newline();
+    builder->appendFormat(depth, "%s_state.add_select(select)", state_name);
     builder->newline();
     return false;
 }
+
+bool CodeGenToz3::preorder(const IR::SelectExpression *se) {
+    builder->append("ParserSelect(");
+    visit(se->select);
+    builder->append(", ");
+    for (auto c: se->selectCases) {
+        visit(c);
+        builder->append(", ");
+    }
+    builder->append(")");
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::SelectCase *sc) {
+    builder->append("(");
+    visit(sc->keyset);
+    builder->append(", ");
+    visit(sc->state);
+    builder->append(")");
+    return false;
+}
+
 
 bool CodeGenToz3::preorder(const IR::P4Control *c) {
     auto ctrl_name = c->name.name;
@@ -90,11 +169,13 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
 
     builder->appendFormat(depth, "%s_py = P4Control(z3_reg, \"%s_state\", [",
                           ctrl_name, ctrl_name);
+
     for (auto cp : c->getApplyParameters()->parameters) {
         visit(cp);
         builder->append(", ");
     }
     builder->append("], [");
+
     for (auto cp : c->getConstructorParameters()->parameters) {
         visit(cp);
         builder->append(", ");
@@ -111,15 +192,11 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
     for (auto a : c->controlLocals) {
         visit(a);
 
-        if (a->is<IR::Declaration_Variable>())
-            builder->appendFormat(depth, "%s_py.add_stmt(stmt)", ctrl_name);
-        else
-            builder->appendFormat(depth,
-                                  "%s_py.declare_local(\"%s\", %s_py)",
-                                  ctrl_name,
-                                  a->name.name,
-                                  a->name.name);
-        builder->newline();
+        builder->appendFormat(depth,
+                              "%s_py.declare_local(\"%s\", %s_py)",
+                              ctrl_name,
+                              a->name.name,
+                              a->name.name);
         builder->newline();
     }
 
@@ -872,11 +949,7 @@ bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
 }
 
 bool CodeGenToz3::preorder(const IR::Declaration_Variable *dv) {
-    builder->append(depth, "lval = \"");
-    builder->append(dv->name.name);
-    builder->append("\"\n");
-    builder->append(depth, "rval = ");
-
+    builder->appendFormat(depth, "%s_py = ", dv->name.name);
     if (dv->initializer) {
         builder->append("P4Initializer(");
         visit(dv->initializer);
@@ -892,7 +965,8 @@ bool CodeGenToz3::preorder(const IR::Declaration_Variable *dv) {
         builder->append(")");
     }
     builder->newline();
-    builder->append(depth, "stmt = AssignmentStatement(lval, rval)");
+    builder->appendFormat(depth, "stmt = AssignmentStatement(\"%s\", %s_py)",
+                    dv->name.name, dv->name.name);
     builder->newline();
     return false;
 }
@@ -1016,6 +1090,38 @@ bool CodeGenToz3::preorder(const IR::Type_Enum *t) {
 
     return false;
 }
+
+// bool CodeGenToz3::preorder(const IR::SerEnumMember *m) {
+//     builder->appendFormat("(\"%s\", ", m->name.name);
+//     visit(m->value);
+//     builder->append(")");
+//     return false;
+// }
+
+
+// bool CodeGenToz3::preorder(const IR::Type_SerEnum *t) {
+//     builder->append(depth, "enum_args = ([");
+//     builder->newline();
+
+//     for (auto m : t->members) {
+//         builder->append(builder->indent(depth + 1));
+//         visit(m);
+//         builder->append(",\n");
+//     }
+//     builder->appendFormat(depth, "], ");
+//     visit(t->type);
+//     builder->append(")");
+//     builder->newline();
+//     builder->appendFormat(depth,
+//                           "z3_reg.declare_global(\"serenum\", \"%s\",
+// enum_args)",
+//                           t->name.name,
+//                           t->name.name);
+//     builder->newline();
+//     builder->newline();
+
+//     return false;
+// }
 
 bool CodeGenToz3::preorder(const IR::Type_Error *t) {
     /* We consider a type error to just be an enum */
