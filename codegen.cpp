@@ -809,9 +809,7 @@ bool CodeGenToz3::preorder(const IR::PathExpression *p) {
 }
 
 bool CodeGenToz3::preorder(const IR::TypeNameExpression *t) {
-    builder->append("\"");
-    builder->appendFormat("%s", t->typeName->path->name.name);
-
+    builder->appendFormat("\"%s\"", t->typeName->path->name.name);
     return false;
 }
 
