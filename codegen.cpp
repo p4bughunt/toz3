@@ -24,12 +24,12 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
     for (auto o: p->objects) {
         visit(o);
 
-        /*        if (auto t = o->to<IR::Type_Declaration>()) {
-                    auto decl_name = t->name.name;
-                    builder->appendFormat(depth, "z3_reg.declare_global(\"%s\",
-                       %s_py)", decl_name, decl_name);
-                    builder->newline();
-                }*/
+        // if (auto t = o->to<IR::Type_Declaration>()) {
+        //     auto decl_name = t->name.name;
+        //     builder->appendFormat(depth, "z3_reg.declare_global(\"%s\",
+        //        %s_py)", decl_name, decl_name);
+        //     builder->newline();
+        // }
     }
     builder->appendFormat(depth,
                           "return main_py if \"main_py\" in locals() else None");
@@ -463,7 +463,10 @@ bool CodeGenToz3::preorder(const IR::ExpressionValue *ev) {
 }
 
 bool CodeGenToz3::preorder(const IR::MethodCallExpression *mce) {
-    if (!is_inswitchstmt) {
+    if (is_inswitchstmt) {
+        visit(mce->method);
+    }
+    else {
         builder->append("MethodCallExpr(");
         visit(mce->method);
         builder->append(", ");
@@ -473,11 +476,6 @@ bool CodeGenToz3::preorder(const IR::MethodCallExpression *mce) {
             builder->append(", ");
         }
         builder->append(")");
-    }
-    else {
-        key_words.insert("apply");
-        visit(mce->method);
-        key_words.erase("apply");
     }
 
     return false;
@@ -765,6 +763,12 @@ bool CodeGenToz3::preorder(const IR::Mask *expr) {
     return false;
 }
 
+bool CodeGenToz3::preorder(const IR::ArrayIndex *expr) {
+    builder->append("P4Member");
+    visit_binary(expr);
+    return false;
+}
+
 bool CodeGenToz3::preorder(const IR::Slice *expr) {
     builder->append("P4Slice");
     visit_ternary(expr);
@@ -847,14 +851,6 @@ bool CodeGenToz3::preorder(const IR::StructInitializerExpression *sie) {
     return false;
 }
 
-bool CodeGenToz3::preorder(const IR::ArrayIndex *a) {
-    builder->append("P4Index(");
-    visit(a->left);
-    builder->append(", ");
-    visit(a->right);
-    builder->append(")");
-    return false;
-}
 
 bool CodeGenToz3::preorder(const IR::DefaultExpression *) {
     builder->appendFormat("\"default\"");
