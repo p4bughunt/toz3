@@ -463,20 +463,15 @@ bool CodeGenToz3::preorder(const IR::ExpressionValue *ev) {
 }
 
 bool CodeGenToz3::preorder(const IR::MethodCallExpression *mce) {
-    if (is_inswitchstmt) {
-        visit(mce->method);
-    }
-    else {
-        builder->append("MethodCallExpr(");
-        visit(mce->method);
-        builder->append(", ");
+    builder->append("MethodCallExpr(");
+    visit(mce->method);
+    builder->append(", ");
 
-        for (auto arg : *mce->arguments) {
-            visit(arg);
-            builder->append(", ");
-        }
-        builder->append(")");
+    for (auto arg : *mce->arguments) {
+        visit(arg);
+        builder->append(", ");
     }
+    builder->append(")");
 
     return false;
 }
@@ -817,9 +812,6 @@ bool CodeGenToz3::preorder(const IR::TypeNameExpression *t) {
     builder->append("\"");
     builder->appendFormat("%s", t->typeName->path->name.name);
 
-    if (!is_in_member)
-        builder->append("\"");
-
     return false;
 }
 
@@ -971,9 +963,7 @@ bool CodeGenToz3::preorder(const IR::SwitchStatement *ss) {
     // TODO: This also should have context
     builder->append(depth, "switch_block = SwitchStatement(");
 
-    is_inswitchstmt = true;
     visit(ss->expression);
-    is_inswitchstmt = false;
     builder->append(")\n");
 
     // switch case

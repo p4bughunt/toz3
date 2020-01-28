@@ -109,8 +109,6 @@ protected:
         "implementation", "psa_implementation",
         "psa_direct_counter", "psa_direct_meter", "junk" };
 
-    bool is_inswitchstmt = false;
-    bool is_in_member    = false;
     bool in_local_scope  = false;
 
 public:
