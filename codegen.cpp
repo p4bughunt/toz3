@@ -14,7 +14,7 @@ void CodeGenToz3::end_apply(const IR::Node *) {
 }
 
 bool CodeGenToz3::preorder(const IR::P4Program *p) {
-    builder->append("from p4z3.expressions import *\n\n");
+    builder->append("from p4z3 import *\n\n");
     builder->newline();
     builder->newline();
     builder->append("def p4_program(z3_reg):");
@@ -859,7 +859,7 @@ bool CodeGenToz3::preorder(const IR::Constant *c) {
         builder->appendFormat("z3.BitVecVal(%s, %d)",
                               c->toString(), tb->size);
     else if (c->type->is<IR::Type_InfInt>()) {
-        builder->appendFormat("%llu", c->asUint64());
+        builder->appendFormat("Z3Int(%llu)", c->asUint64());
     }
     else
         FATAL_ERROR("Constant Node %s not implemented!",
