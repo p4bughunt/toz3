@@ -856,10 +856,14 @@ bool CodeGenToz3::preorder(const IR::Constant *c) {
     // visit(c->type);
     // builder->append(")");
     if (auto tb = c->type->to<IR::Type_Bits>())
-        builder->appendFormat("z3.BitVecVal(%s, %d)",
-                              c->toString(), tb->size);
+        if (tb->isSigned)
+            builder->appendFormat("Z3Int(%s, %d)",
+                                  c->toString(), tb->size);
+        else
+            builder->appendFormat("z3.BitVecVal(%s, %d)",
+                                  c->toString(), tb->size);
     else if (c->type->is<IR::Type_InfInt>()) {
-        builder->appendFormat("Z3Int(%llu)", c->asUint64());
+        builder->appendFormat("Z3Int(%s)", c->toString());
     }
     else
         FATAL_ERROR("Constant Node %s not implemented!",
@@ -1292,12 +1296,10 @@ bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
     }
 
     for (auto arg: *di->arguments) {
-        if (arg->name.name != nullptr)
-            builder->appendFormat("%s=", arg->name.name);
-        visit(arg->expression);
-
-        // builder->append("_py");
         if (arg->expression != nullptr)
+            if (arg->name.name != nullptr)
+                builder->appendFormat("%s=", arg->name.name);
+            visit(arg->expression);
             builder->append(", ");
     }
     builder->append(")");
