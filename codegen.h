@@ -238,6 +238,7 @@ public:
     bool preorder(const IR::Type_Bits *t) override;
     bool preorder(const IR::Type_Varbits *t) override;
     bool preorder(const IR::Type_Name *t) override;
+    bool preorder(const IR::Type_Var *) override;
     bool preorder(const IR::Type_Specialized *t) override;
     bool preorder(const IR::Type_Boolean *t) override;
     bool preorder(const IR::Type_Void *t) override;
@@ -259,9 +260,6 @@ public:
         return false;
     }
 
-    bool preorder(const IR::Type_Var *) override {
-        return false;
-    }
 };
 } // namespace TOZ3
 

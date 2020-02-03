@@ -229,74 +229,62 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
 bool CodeGenToz3::preorder(const IR::Type_Extern *t) {
     auto extern_name = t->name.name;
 
-    builder->delim_comment(depth, "EXTERN %s", extern_name);
-    builder->appendFormat(depth,
-                          "%s_py = P4Extern(\"%s\", z3_reg)",
-                          extern_name,
-                          extern_name);
-    builder->newline();
-
-    for (auto param : t->typeParameters->parameters) {
-        builder->appendFormat(depth, "%s_py.add_parameter(", extern_name);
-        visit(param);
-        builder->append(")");
-        builder->newline();
+    if (!in_local_scope) {
+        builder->appendFormat(depth, "%s_py = ", extern_name);
     }
+    builder->appendFormat("P4Extern(\"%s\", z3_reg, ", extern_name);
+
+    builder->append("type_params=[");
+    for (auto param : t->getTypeParameters()->parameters) {
+        visit(param);
+        builder->append(", ");
+    }
+    builder->append("], methods=[");
 
     for (auto m : t->methods) {
-        // top part
         in_local_scope = true;
-        builder->append(depth, "def INTERNAL_METHOD():");
-        builder->newline();
-        depth++;
         visit(m);
-        builder->appendFormat(depth, "return %s_py", m->name.name);
-        builder->newline();
         in_local_scope = false;
-        depth--;
+        builder->append(", ");
+    }
+    builder->append("])");
+    if (!in_local_scope) {
+        builder->newline();
         builder->appendFormat(depth,
-                              "%s_py.add_method",
+                              "z3_reg.declare_global(\"extern\", \"%s\", %s_py)",
+                              extern_name,
                               extern_name);
-        builder->appendFormat("(\"%s\", INTERNAL_METHOD())", m->name.name);
         builder->newline();
     }
-    builder->appendFormat(depth,
-                          "z3_reg.declare_global(\"extern\", \"%s\", %s_py)",
-                          extern_name,
-                          extern_name);
-    builder->newline();
-    builder->delim_comment(depth, "END EXTERN %s", extern_name);
-    builder->newline();
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Method *t) {
     auto method_name = t->name.name;
 
-    builder->delim_comment(depth, "METHOD %s ", method_name);
-    builder->appendFormat(depth,
-                          "%s_py = P4Extern(\"%s\", z3_reg, ",
-                          method_name,
-                          method_name);
-    visit(t->type->returnType);
-    builder->append(")");
-    builder->newline();
-
-    for (auto param : t->getParameters()->parameters) {
-        builder->appendFormat(depth, "%s_py.add_parameter(", method_name);
-        visit(param);
-        builder->append(")");
-        builder->newline();
-    }
-
     if (!in_local_scope) {
+        builder->appendFormat(depth, "%s_py = ", method_name);
+    }
+    builder->appendFormat("P4Method(\"%s\", z3_reg, return_type=", method_name);
+    if (t->type->returnType)
+        visit(t->type->returnType);
+    else
+        builder->append("None");
+
+    builder->append(", params=[");
+    for (auto param : t->getParameters()->parameters) {
+        visit(param);
+        builder->append(", ");
+    }
+    builder->append("])");
+    if (!in_local_scope) {
+        builder->newline();
         builder->appendFormat(depth,
-                              "z3_reg.declare_global(\"method\", \"%s\", %s_py)",
+                              "z3_reg.declare_global(\"extern\", \"%s\", %s_py)",
                               method_name,
                               method_name);
         builder->newline();
     }
-    builder->delim_comment(depth, "END METHOD %s", method_name);
     return false;
 }
 
@@ -1260,12 +1248,20 @@ bool CodeGenToz3::preorder(const IR::Type_Varbits *t) { \
 
 bool CodeGenToz3::preorder(const IR::Type_Tuple *t) {
     ::warning("Using generic width bits for a tuple type.");
+    // for (auto c : t->components) {
+        // visit (c);
+    // }
     builder->appendFormat("z3.BitVecSort(%d)", t->width_bits());
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Name *t) {
     builder->appendFormat("z3_reg.type(\"%s\")", t->path->name.name);
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::Type_Var *t) {
+    builder->appendFormat("z3_reg.type(\"%s\")", t->getVarName());
     return false;
 }
 
