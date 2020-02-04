@@ -173,7 +173,7 @@ public:
 
     /***** Expressions *****/
     bool preorder(const IR::Member *m) override;
-    // bool preorder(const IR::SerEnumMember *m) override;
+    bool preorder(const IR::SerEnumMember *m) override;
     bool preorder(const IR::PathExpression *p) override;
     bool preorder(const IR::DefaultExpression *) override;
     bool preorder(const IR::ListExpression *le) override;
@@ -227,7 +227,7 @@ public:
     bool preorder(const IR::Type_Header *t) override;
     bool preorder(const IR::Type_HeaderUnion *) override;
     bool preorder(const IR::Type_Enum *) override;
-    // bool preorder(const IR::Type_SerEnum *) override;
+    bool preorder(const IR::Type_SerEnum *) override;
     bool preorder(const IR::Type_Error *) override;
     bool preorder(const IR::Type_Parser *) override;
     bool preorder(const IR::Type_Control *) override;
