@@ -490,7 +490,10 @@ bool CodeGenToz3::preorder(const IR::BlockStatement *b) {
     // body part
     for (auto c : b->components) {
         visit(c);
-        builder->append(depth, "block.add(stmt)");
+        if (auto decl = c->to<IR::Declaration_Constant>())
+            builder->appendFormat(depth, "block.add(%s_py)", decl->name.name);
+        else
+            builder->append(depth, "block.add(stmt)");
         builder->newline();
     }
 
@@ -887,6 +890,11 @@ bool CodeGenToz3::preorder(const IR::Parameter *p) {
     builder->append(p->name);
     builder->append("\", ");
     visit(p->type);
+    builder->append(", ");
+    if (p->defaultValue)
+        visit(p->defaultValue);
+    else
+        builder->append("None");
     builder->append(")");
 
     return false;
@@ -918,10 +926,17 @@ bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
     }
     builder->newline();
 
-    builder->append(depth, "stmt = Declaration(lval, rval)");
-    builder->newline();
     if (!in_local_scope) {
-        builder->append(depth, "z3_reg.declare_global(stmt)");
+        builder->appendFormat(depth, "%s_py  = Declaration(lval, rval)",
+         dc->name.name);
+        builder->newline();
+        builder->appendFormat(depth, "z3_reg.declare_global(%s_py )",
+         dc->name.name);
+        builder->newline();
+    }
+    else {
+        builder->appendFormat(depth, "%s_py = AssignmentStatement(lval, rval)",
+            dc->name.name);
         builder->newline();
     }
     return false;
