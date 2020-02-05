@@ -18,21 +18,28 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
     builder->newline();
     builder->newline();
     builder->append("def p4_program(z3_reg):");
+    depth = 1;
     builder->newline();
 
     // Start to visit the actual AST objects
     for (auto o: p->objects) {
         visit(o);
 
-        // if (auto t = o->to<IR::Type_Declaration>()) {
-        //     auto decl_name = t->name.name;
-        //     builder->appendFormat(depth, "z3_reg.declare_global(        //        %s_py)", decl_name, decl_name);
-        //     builder->newline();
-        // }
+        if (auto t = o->to<IR::Type_Declaration>()) {
+            auto decl_name = t->name.name;
+            builder->appendFormat(depth, "z3_reg.declare_global(%s_py)", decl_name, decl_name);
+            builder->newline();
+        }
+        if (auto t = o->to<IR::Declaration>()) {
+            auto decl_name = t->name.name;
+            builder->appendFormat(depth, "z3_reg.declare_global(%s_py)", decl_name, decl_name);
+            builder->newline();
+        }
     }
     builder->appendFormat(depth,
                           "return z3_reg._globals[\"main\"] if \"main\" in z3_reg._globals else None");
     builder->newline();
+    depth = 0;
     return false;
 }
 
@@ -101,11 +108,6 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     depth--;
     in_local_scope = false;
     builder->appendFormat(depth, "%s_py = PARSER()", parser_name);
-    builder->newline();
-    builder->appendFormat(depth,
-                          "z3_reg.declare_global(%s_py)",
-                          parser_name,
-                          parser_name);
     builder->newline();
 
     builder->delim_comment(depth, "END PARSER %s", parser_name);
@@ -214,11 +216,6 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
     in_local_scope = false;
     builder->appendFormat(depth, "%s_py = CONTROL()", ctrl_name);
     builder->newline();
-    builder->appendFormat(depth,
-                          "z3_reg.declare_global(%s_py)",
-                          ctrl_name,
-                          ctrl_name);
-    builder->newline();
 
     builder->delim_comment(depth, "END CONTROL %s", ctrl_name);
     builder->newline();
@@ -232,9 +229,8 @@ bool CodeGenToz3::preorder(const IR::Type_Extern *t) {
     if (!in_local_scope) {
         builder->appendFormat(depth, "%s_py = ", extern_name);
     }
-    builder->appendFormat("P4Extern(\"%s\", z3_reg, ", extern_name);
+    builder->appendFormat("P4Extern(\"%s\", z3_reg, type_params=[", extern_name);
 
-    builder->append("type_params=[");
     for (auto param : t->getTypeParameters()->parameters) {
         visit(param);
         builder->append(", ");
@@ -249,11 +245,6 @@ bool CodeGenToz3::preorder(const IR::Type_Extern *t) {
     }
     builder->append("])");
     if (!in_local_scope) {
-        builder->newline();
-        builder->appendFormat(depth,
-                              "z3_reg.declare_global(%s_py)",
-                              extern_name,
-                              extern_name);
         builder->newline();
     }
     return false;
@@ -279,11 +270,6 @@ bool CodeGenToz3::preorder(const IR::Method *t) {
     builder->append("])");
     if (!in_local_scope) {
         builder->newline();
-        builder->appendFormat(depth,
-                              "z3_reg.declare_global(%s_py)",
-                              method_name,
-                              method_name);
-        builder->newline();
     }
     return false;
 }
@@ -292,27 +278,20 @@ bool CodeGenToz3::preorder(const IR::Function *function) {
     auto function_name = function->name.name;
 
     builder->delim_comment(depth, "FUNCTION %s", function_name);
-    builder->appendFormat(depth, "%s_py = P4Function(\"%s\", ", function_name, function_name);
+    builder->appendFormat(depth, "%s_py = P4Function(\"%s\", return_type=", function_name, function_name);
     visit(function->type->returnType);
-    builder->append(")");
-    builder->newline();
-
+    builder->append(", params=[");
     for (auto param : function->getParameters()->parameters) {
-        builder->appendFormat(depth, "%s_py.add_parameter(", function_name);
         visit(param);
-        builder->append(")");
-        builder->newline();
+        builder->append(", ");
     }
+    builder->append("])"),
+    builder->newline();
 
     // body BlockStatement
     visit(function->body);
 
     builder->appendFormat(depth, "%s_py.add_stmt(stmt)", function_name);
-    builder->newline();
-    builder->appendFormat(depth,
-                          "z3_reg.declare_global(%s_py)",
-                          function_name,
-                          function_name);
     builder->newline();
     builder->delim_comment(depth, "END FUNCTION %s", function_name);
     builder->newline();
@@ -323,15 +302,13 @@ bool CodeGenToz3::preorder(const IR::P4Action *p4action) {
     auto action_name = p4action->name.name;
 
     builder->delim_comment(depth, "ACTION %s", action_name);
-    builder->appendFormat(depth, "%s_py = P4Action(\"%s\")", action_name, action_name);
-    builder->newline();
-
-    for (auto param : p4action->parameters->parameters) {
-        builder->appendFormat(depth, "%s_py.add_parameter(", action_name);
+    builder->appendFormat(depth, "%s_py = P4Action(\"%s\", params=[", action_name, action_name);
+    for (auto param : p4action->getParameters()->parameters) {
         visit(param);
-        builder->append(")");
-        builder->newline();
+        builder->append(", ");
     }
+    builder->append("])"),
+    builder->newline();
 
     // body BlockStatement
     visit(p4action->body);
@@ -339,104 +316,78 @@ bool CodeGenToz3::preorder(const IR::P4Action *p4action) {
     builder->appendFormat(depth, "%s_py.add_stmt(stmt)", action_name);
     builder->newline();
 
-    if (!in_local_scope) {
-        builder->appendFormat(depth,
-                              "z3_reg.declare_global(%s_py)",
-                              action_name,
-                              action_name);
-        builder->newline();
-    }
     builder->delim_comment(depth, "END ACTION %s", action_name);
     builder->newline();
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::P4Table *p4table) {
-    tab_name = p4table->name.name;
+    auto tab_name = p4table->name.name;
     builder->delim_comment(depth, "TABLE %s", tab_name);
-    builder->appendFormat(depth, "%s_py = P4Table(\"%s\")", tab_name, tab_name);
-    builder->newline();
-
+    builder->appendFormat(depth, "%s_py = P4Table(\"%s\", ", tab_name, tab_name);
     for (auto p : p4table->properties->properties) {
         // IR::Property
         visit(p);
+        builder->append(", ");
     }
+    builder->append(")");
+    builder->newline();
     builder->delim_comment(depth, "END TABLE %s", tab_name);
     builder->newline();
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Property *p) {
-    // Tao: a trick here
-    if ((table_skips.find(p->name.name) != table_skips.end()))
-        // skip it
-        return false;
-
-    if (p->name.name == "default_action") {
-        builder->appendFormat(depth, "%s_py.add_default(", tab_name);
-        visit(p->value);
-        builder->append(")");
-        builder->newline();
-    } else {
-        visit(p->value);
-    }
+    builder->appendFormat("%s=", p->name.name);
+    visit(p->value);
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::ActionList *acl) {
-    // Tao: a trick here
+    builder->append("[");
     for (auto act: acl->actionList) {
         bool ignore_default = false;
-
         for (const auto *anno : act->getAnnotations()->annotations) {
             if (anno->name.name == "defaultonly") {
                 ignore_default = true;
             }
         }
-
         if (ignore_default)
             continue;
-
-        builder->appendFormat(depth, "%s_py.add_action(", tab_name);
         visit(act->expression);
-        builder->append(")");
-        builder->newline();
+        builder->append(", ");
     }
-    builder->newline();
+    builder->append("]");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Entry *e) {
-    // Tao: a trick here
+    builder->append("(");
     visit(e->keys);
     builder->append(", ");
     visit(e->action);
-    builder->newline();
+    builder->append(")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::EntriesList *el) {
     // Tao: a trick here
+    builder->append("[");
     for (auto entry: el->entries) {
-        builder->appendFormat(depth, "%s_py.add_const_entry(", tab_name);
         visit(entry);
-        builder->append(")");
-        builder->newline();
+        builder->append(", ");
     }
-    builder->newline();
+    builder->append("]");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Key *key) {
+    builder->append("[");
     for (auto ke : key->keyElements) {
-        builder->append(depth, "table_key = ");
         visit(ke->expression);
-        builder->newline();
-        builder->appendFormat(depth, "%s_py.add_match(table_key)",
-                              tab_name);
-        builder->newline();
+        builder->append(", ");
     }
-    builder->newline();
+    builder->append("]");
     return false;
 }
 
@@ -930,9 +881,6 @@ bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
         builder->appendFormat(depth, "%s_py  = Declaration(lval, rval)",
          dc->name.name);
         builder->newline();
-        builder->appendFormat(depth, "z3_reg.declare_global(%s_py )",
-         dc->name.name);
-        builder->newline();
     }
     else {
         builder->appendFormat(depth, "%s_py = AssignmentStatement(lval, rval)",
@@ -1013,6 +961,61 @@ bool CodeGenToz3::preorder(const IR::Declaration_ID *di) {
     return false;
 }
 
+bool CodeGenToz3::preorder(const IR::Type_Control *t) {
+    auto ctrl_name = t->name.name;
+
+    builder->delim_comment(depth, "CONTROL_TYPE %s", ctrl_name);
+    builder->appendFormat(depth, "%s_py = P4Extern(\"%s\", z3_reg, type_params=[", ctrl_name, ctrl_name);
+
+    for (auto param : t->applyParams->parameters) {
+        visit(param);
+        builder->append(", ");
+    }
+    builder->append("])");
+    builder->newline();
+
+    builder->delim_comment(depth, "END CONTROL_TYPE %s", ctrl_name);
+    builder->newline();
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::Type_Parser *t) {
+    auto parser_name = t->name.name;
+
+    builder->delim_comment(depth, "PARSER_TYPE %s", parser_name);
+    builder->appendFormat(depth,
+                          "%s_py = P4Extern(\"%s\", z3_reg, type_params=[",
+                          parser_name,
+                          parser_name);
+    for (auto param : t->applyParams->parameters) {
+        visit(param);
+        builder->append(", ");
+    }
+    builder->append("])");
+    builder->newline();
+
+    builder->delim_comment(depth, "END PARSER_TYPE %s", parser_name);
+    builder->newline();
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::Type_Package *t) {
+    auto t_name = t->getName().name;
+
+    builder->appendFormat(depth,
+                          "%s_py = P4Package(z3_reg, \"%s\", ",
+                          t_name,
+                          t_name);
+
+    for (auto cp : t->getConstructorParameters()->parameters) {
+        visit(cp);
+        builder->append(", ");
+    }
+    builder->append(")");
+    builder->newline();
+    return false;
+}
+
 void CodeGenToz3::emit_args(const IR::Type_StructLike *t) {
     builder->append("z3_args=[");
     for (auto f : t->fields) {
@@ -1024,47 +1027,43 @@ void CodeGenToz3::emit_args(const IR::Type_StructLike *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Header *t) {
-    builder->append(depth, "z3_reg.declare_global(");
+    builder->appendFormat(depth, "%s_py = ", t->name.name);
     builder->appendFormat("Header(\"%s\", ", t->name.name);
     emit_args(t);
-    builder->append("))");
+    builder->append(")");
     builder->newline();
     builder->newline();
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_HeaderUnion *t) {
-    builder->append(depth, "z3_reg.declare_global(");
+    builder->appendFormat(depth, "%s_py = ", t->name.name);
     builder->appendFormat("HeaderUnion(\"%s\", ", t->name.name);
     emit_args(t);
-    builder->append("))");
-    builder->newline();
+    builder->append(")");
     builder->newline();
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Struct *t) {
-    builder->append(depth, "z3_reg.declare_global(");
+    builder->appendFormat(depth, "%s_py = ", t->name.name);
     builder->appendFormat("Struct(\"%s\", ", t->name.name);
     emit_args(t);
-    builder->append("))");
-    builder->newline();
+    builder->append(")");
     builder->newline();
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Enum *t) {
-    builder->append(depth, "z3_reg.declare_global(");
+    builder->appendFormat(depth, "%s_py = ", t->name.name);
     builder->appendFormat("Enum(\"%s\", [", t->name.name);
     for (auto m : t->members) {
         visit(m);
         builder->append(", ");
     }
 
-    builder->append("]))");
+    builder->append("])");
     builder->newline();
-    builder->newline();
-
     return false;
 }
 
@@ -1077,7 +1076,7 @@ bool CodeGenToz3::preorder(const IR::SerEnumMember *m) {
 
 
 bool CodeGenToz3::preorder(const IR::Type_SerEnum *t) {
-    builder->append(depth, "z3_reg.declare_global(");
+    builder->appendFormat(depth, "%s_py = ", t->name.name);
     builder->appendFormat("SerEnum(\"%s\", [", t->name.name);
     for (auto m : t->members) {
         visit(m);
@@ -1086,117 +1085,39 @@ bool CodeGenToz3::preorder(const IR::Type_SerEnum *t) {
 
     builder->append("], ");
     visit(t->type);
-    builder->append(")),");
+    builder->append("),");
     builder->newline();
-    builder->newline();
-
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Error *t) {
     /* We consider a type error to just be an enum */
-    builder->append(depth, "z3_reg.declare_global(");
+    builder->appendFormat(depth, "%s_py = ", t->name.name);
     builder->appendFormat("Enum(\"%s\", [", t->name.name);
     for (auto m : t->members) {
         visit(m);
         builder->append(", ");
     }
 
-    builder->append("]))");
-    builder->newline();
-    builder->newline();
-
-    return false;
-}
-
-bool CodeGenToz3::preorder(const IR::Type_Control *t) {
-    auto ctrl_name = t->name.name;
-
-    builder->delim_comment(depth, "CONTROL_TYPE %s", ctrl_name);
-    builder->appendFormat(depth,
-                          "%s_py = P4Extern(\"%s\", z3_reg)",
-                          ctrl_name,
-                          ctrl_name);
-    builder->newline();
-
-    for (auto param : t->applyParams->parameters) {
-        builder->appendFormat(depth, "%s_py.add_parameter(", ctrl_name);
-        visit(param);
-        builder->append(")");
-        builder->newline();
-    }
-    builder->appendFormat(depth,
-                          "z3_reg.declare_global(%s_py)",
-                          ctrl_name,
-                          ctrl_name);
-    builder->newline();
-    builder->delim_comment(depth, "END CONTROL_TYPE %s", ctrl_name);
-    builder->newline();
-    return false;
-}
-
-bool CodeGenToz3::preorder(const IR::Type_Parser *t) {
-    auto parser_name = t->name.name;
-
-    builder->delim_comment(depth, "PARSER_TYPE %s", parser_name);
-    builder->appendFormat(depth,
-                          "%s_py = P4Extern(\"%s\", z3_reg)",
-                          parser_name,
-                          parser_name);
-    builder->newline();
-
-    for (auto param : t->applyParams->parameters) {
-        builder->appendFormat(depth, "%s_py.add_parameter(", parser_name);
-        visit(param);
-        builder->append(")");
-        builder->newline();
-    }
-    builder->appendFormat(depth,
-                          "z3_reg.declare_global(%s_py)",
-                          parser_name,
-                          parser_name);
-    builder->newline();
-    builder->delim_comment(depth, "END PARSER_TYPE %s", parser_name);
-    builder->newline();
-    return false;
-}
-
-bool CodeGenToz3::preorder(const IR::Type_Package *t) {
-    auto t_name = t->getName().name;
-
-    builder->appendFormat(depth,
-                          "%s = P4Package(z3_reg, \"%s\", ",
-                          t_name,
-                          t_name);
-
-    for (auto cp : t->getConstructorParameters()->parameters) {
-        visit(cp);
-        builder->append(", ");
-    }
-    builder->append(")");
-    builder->newline();
-    builder->appendFormat(depth,
-                          "z3_reg.declare_global(%s)",
-                          t_name,
-                          t_name);
+    builder->append("])");
     builder->newline();
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Typedef *t) {
-    builder->appendFormat(depth, "z3_reg.declare_global(Declaration(\"%s\", ",
-                          t->name.name);
+    builder->appendFormat(depth, "%s_py = Declaration(\"%s\", ",
+                          t->name.name, t->name.name);
     visit(t->type);
-    builder->append("))");
+    builder->append(")");
     builder->newline();
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Newtype *t) {
-    builder->appendFormat(depth, "z3_reg.declare_global(Declaration(\"%s\", ",
-                          t->name.name);
+    builder->appendFormat(depth, "%s_py = Declaration(\"%s\", ",
+                          t->name.name, t->name.name);
     visit(t->type);
-    builder->append("))");
+    builder->append(")");
     builder->newline();
     return false;
 }
@@ -1295,9 +1216,8 @@ bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
     builder->newline();
 
     if (!in_local_scope) {
-        builder->appendFormat(depth,
-                              "z3_reg.declare_global(Declaration(\"%s\", %s_py))",
-                              di->name.name,
+        builder->appendFormat(depth, "%s_py  = Declaration(\"%s\", %s_py)",
+                              di->name.name, di->name.name,
                               di->name.name);
         builder->newline();
     }

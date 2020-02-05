@@ -89,7 +89,7 @@ int main(int argc, char *const argv[]) {
             P4::P4COptionPragmaParser optionsPragmaParser;
             program->apply(P4::ApplyOptionsPragmas(optionsPragmaParser));
 
-            TOZ3::CodeGenToz3* cgt3 = new TOZ3::CodeGenToz3(1, ostream);
+            TOZ3::CodeGenToz3* cgt3 = new TOZ3::CodeGenToz3(0, ostream);
             program->apply(*cgt3);
         } catch (const Util::P4CExceptionBase &bug) {
             std::cerr << bug.what() << std::endl;

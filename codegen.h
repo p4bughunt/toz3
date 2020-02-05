@@ -96,18 +96,8 @@ class CodeGenToz3 : public Inspector {
 protected:
 
     // TODO: Get rid of all this global state
-
-    // table context
-    cstring tab_name;
-
-    // table context
-
     // reserved keywords
     std::set<cstring>key_words      = { "action_run" };
-    std::set<cstring>table_skips = {
-        "size", "meters", "counters",
-        "implementation", "psa_implementation",
-        "psa_direct_counter", "psa_direct_meter", "junk" };
 
     bool in_local_scope  = false;
 
