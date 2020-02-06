@@ -66,10 +66,20 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
         visit(cp);
         builder->append(", ");
     }
-    builder->append("])");
+    builder->append("], body=[]");
+    // visit(p->body);
     builder->newline();
+    builder->append(", local_decls=[");
+    // for (auto a : p->parserLocals) {
+    //     builder->appendFormat("P4Declaration(\"%s\", ", a->name.name);
+    //     visit(a);
+    //     builder->append("), ");
+    // }
+    // builder->newline();
+    builder->append(depth, "])");
     builder->newline();
-
+    builder->appendFormat(depth, "return %s_py", parser_name);
+    builder->newline();
     /*
      * (1) Action
      * (2) Tables
@@ -101,7 +111,6 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     // builder->appendFormat(depth, "%s_py.add_stmt(%s_parser)",
     //     parser_name, parser_name);
     // builder->newline();
-    builder->appendFormat(depth, "return %s_py", parser_name);
     builder->newline();
 
 
@@ -165,58 +174,48 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
     in_local_scope = true;
     builder->delim_comment(depth, "CONTROL %s", ctrl_name);
 
-    builder->append(depth, "def CONTROL():");
-    builder->newline();
+    builder->appendFormat(depth, "%s_py = P4Control(z3_reg,",
+                          ctrl_name);
     depth++;
-
-    builder->appendFormat(depth, "%s_py = P4Control(z3_reg, \"%s\", [",
-                          ctrl_name, ctrl_name);
+    builder->newline();
+    builder->appendFormat(depth, "name=\"%s\",", ctrl_name);
+    builder->newline();
+    builder->append(depth, "params=[");
 
     for (auto cp : c->getApplyParameters()->parameters) {
         visit(cp);
         builder->append(", ");
     }
-    builder->append("], [");
+    builder->append("],");
+    builder->newline();
+    builder->append(depth, "const_params=[");
 
     for (auto cp : c->getConstructorParameters()->parameters) {
         visit(cp);
         builder->append(", ");
     }
-    builder->append("])");
+    builder->append("],");
     builder->newline();
-    builder->newline();
-
-    /*
-     * (1) Action
-     * (2) Tables
-     * (3) Instance Declarations
-     */
-    for (auto a : c->controlLocals) {
-        visit(a);
-
-        builder->appendFormat(depth,
-                              "%s_py.declare_local(P4Declaration(\"%s\", %s_py))",
-                              ctrl_name,
-                              a->name.name,
-                              a->name.name);
-        builder->newline();
-    }
-
-    /*
-     * (3) Apply Part
-     */
-    builder->delim_comment(depth, "CONTROL %s APPLY", ctrl_name);
+    builder->append(depth, "body=");
     visit(c->body);
-    builder->appendFormat(depth, "%s_py.add_stmt(stmt)", ctrl_name);
+    builder->append(",");
     builder->newline();
-    builder->appendFormat(depth, "return %s_py", ctrl_name);
-    builder->newline();
-
+    builder->append(depth,"local_decls=[");
+    depth++;
+    for (auto a : c->controlLocals) {
+        builder->newline();
+        builder->appendFormat(depth, "P4Declaration(\"%s\", ", a->name.name);
+        visit(a);
+        builder->append("), ");
+    }
     depth--;
-    in_local_scope = false;
-    builder->appendFormat(depth, "%s_py = CONTROL()", ctrl_name);
+    builder->append("]");
+    builder->newline();
+    depth--;
+    builder->append(depth, ")");
     builder->newline();
 
+    in_local_scope = false;
     builder->delim_comment(depth, "END CONTROL %s", ctrl_name);
     builder->newline();
 
@@ -226,9 +225,8 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
 bool CodeGenToz3::preorder(const IR::Type_Extern *t) {
     auto extern_name = t->name.name;
 
-    if (!in_local_scope) {
+    if (!in_local_scope)
         builder->appendFormat(depth, "%s_py = ", extern_name);
-    }
     builder->appendFormat("P4Extern(\"%s\", z3_reg, type_params=[", extern_name);
 
     for (auto param : t->getTypeParameters()->parameters) {
@@ -253,9 +251,8 @@ bool CodeGenToz3::preorder(const IR::Type_Extern *t) {
 bool CodeGenToz3::preorder(const IR::Method *t) {
     auto method_name = t->name.name;
 
-    if (!in_local_scope) {
+    if (!in_local_scope)
         builder->appendFormat(depth, "%s_py = ", method_name);
-    }
     builder->appendFormat("P4Method(\"%s\", z3_reg, return_type=", method_name);
     if (t->type->returnType)
         visit(t->type->returnType);
@@ -277,63 +274,57 @@ bool CodeGenToz3::preorder(const IR::Method *t) {
 bool CodeGenToz3::preorder(const IR::Function *function) {
     auto function_name = function->name.name;
 
-    builder->delim_comment(depth, "FUNCTION %s", function_name);
-    builder->appendFormat(depth, "%s_py = P4Function(\"%s\", return_type=", function_name, function_name);
+    if (!in_local_scope)
+        builder->appendFormat(depth, "%s_py = ", function_name);
+    builder->appendFormat("P4Function(\"%s\", return_type=", function_name);
     visit(function->type->returnType);
     builder->append(", params=[");
     for (auto param : function->getParameters()->parameters) {
         visit(param);
         builder->append(", ");
     }
-    builder->append("])"),
-    builder->newline();
+    builder->append("], "),
 
-    // body BlockStatement
+    builder->appendFormat(depth, "body=", function_name);
+    in_local_scope=true;
     visit(function->body);
-
-    builder->appendFormat(depth, "%s_py.add_stmt(stmt)", function_name);
-    builder->newline();
-    builder->delim_comment(depth, "END FUNCTION %s", function_name);
-    builder->newline();
+    in_local_scope=false;
+    builder->append(depth, ")");
+    if (!in_local_scope) {
+        builder->newline();
+    }
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::P4Action *p4action) {
     auto action_name = p4action->name.name;
-
-    builder->delim_comment(depth, "ACTION %s", action_name);
-    builder->appendFormat(depth, "%s_py = P4Action(\"%s\", params=[", action_name, action_name);
+    if (!in_local_scope)
+        builder->appendFormat(depth, "%s_py = ", action_name);
+    builder->appendFormat("P4Action(\"%s\", params=[", action_name);
     for (auto param : p4action->getParameters()->parameters) {
         visit(param);
         builder->append(", ");
     }
-    builder->append("])"),
-    builder->newline();
+    builder->append("], "),
 
-    // body BlockStatement
+    builder->appendFormat(depth, "body=", action_name);
     visit(p4action->body);
-
-    builder->appendFormat(depth, "%s_py.add_stmt(stmt)", action_name);
-    builder->newline();
-
-    builder->delim_comment(depth, "END ACTION %s", action_name);
-    builder->newline();
+    builder->append(depth, ")");
+    if (!in_local_scope) {
+        builder->newline();
+    }
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::P4Table *p4table) {
     auto tab_name = p4table->name.name;
-    builder->delim_comment(depth, "TABLE %s", tab_name);
-    builder->appendFormat(depth, "%s_py = P4Table(\"%s\", ", tab_name, tab_name);
+    builder->appendFormat(depth, "P4Table(\"%s\", ", tab_name, tab_name);
     for (auto p : p4table->properties->properties) {
         // IR::Property
         visit(p);
         builder->append(", ");
     }
     builder->append(")");
-    builder->newline();
-    builder->delim_comment(depth, "END TABLE %s", tab_name);
-    builder->newline();
     return false;
 }
 
@@ -431,97 +422,69 @@ bool CodeGenToz3::preorder(const IR::ListExpression *le) {
 }
 
 bool CodeGenToz3::preorder(const IR::BlockStatement *b) {
-    // top part
-    builder->append(depth, "def BLOCK():");
-    builder->newline();
-    depth++;
-    builder->append(depth, "block = BlockStatement()");
-    builder->newline();
-
+    builder->append("BlockStatement([");
     // body part
+    depth++;
     for (auto c : b->components) {
-        visit(c);
-        if (auto decl = c->to<IR::Declaration_Constant>())
-            builder->appendFormat(depth, "block.add(%s_py)", decl->name.name);
-        else
-            builder->append(depth, "block.add(stmt)");
         builder->newline();
+        builder->append(depth, "");
+        if (auto dc = c->to<IR::Declaration_Variable>())
+            builder->appendFormat("P4Declaration(\"%s\", ", dc->name.name);
+        visit(c);
+        if (c->is<IR::Declaration_Variable>())
+            builder->append(")");
+        builder->append(",");
     }
-
-    // bot part
-    builder->append(depth, "return block");
-    builder->newline();
+    builder->append("]");
     depth--;
-
-    builder->append(depth, "stmt = BLOCK()");
     builder->newline();
+    builder->append(depth,")");
 
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::EmptyStatement *) {
-    builder->append(depth, "stmt = P4Noop()");
-    builder->newline();
+    builder->append(depth, "P4Noop()");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::ExitStatement *) {
-    builder->append(depth, "stmt = P4Exit()");
-    builder->newline();
+    builder->append(depth, "P4Exit()");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::ReturnStatement *r) {
     // TODO: Make this a proper return statement
-    builder->append(depth, "stmt = P4Return(");
+    builder->append("P4Return(");
     visit(r->expression);
     builder->append(")");
-    builder->newline();
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::AssignmentStatement *as) {
-    builder->append(depth, "lval = ");
+    builder->append("AssignmentStatement(");
     visit(as->left);
-    builder->newline();
-    builder->append(depth, "rval = ");
+    builder->append(", ");
     visit(as->right);
-    builder->newline();
-
-    builder->append(depth, "stmt = AssignmentStatement(lval, rval)");
-    builder->newline();
+    builder->append(")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::MethodCallStatement *mcs) {
-    builder->append(depth, "stmt = MethodCallStmt(");
+    builder->append("MethodCallStmt(");
     visit(mcs->methodCall);
     builder->append(")");
-    builder->newline();
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::IfStatement *ifs) {
-    builder->append(depth, "def IF_BLOCK():\n");
-    depth++;
-    builder->append(depth, "if_block = IfStatement()\n");
-
-    // basically, ifs->condition is an expression
-    builder->append(depth, "condition = ");
+    builder->append(depth, "IfStatement(");
     visit(ifs->condition);
-    builder->newline();
-    builder->append(depth, "if_block.add_condition(condition)\n\n\n");
-
+    builder->append(", ");
     visit(ifs->ifTrue);
-    builder->append(depth, "if_block.add_then_stmt(stmt)\n\n\n");
-
-    if (ifs->ifFalse != nullptr) {
-        visit(ifs->ifFalse);
-        builder->append(depth, "if_block.add_else_stmt(stmt)\n\n\n");
-    }
-    builder->append(depth, "return if_block\n");
-    depth--;
-    builder->append(depth, "stmt = IF_BLOCK()\n\n");
+    builder->append(", ");
+    visit(ifs->ifFalse);
+    builder->append(")");
 
     return false;
 }
@@ -861,12 +824,16 @@ bool CodeGenToz3::preorder(const IR::Argument *arg) {
 }
 
 bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
-    builder->append(depth, "lval = \"");
-    builder->append(dc->name.name);
-    builder->append("\"\n");
-    builder->append(depth, "rval = ");
-
-    if (nullptr != dc->initializer)
+    if (!in_local_scope) {
+        builder->appendFormat(depth, "%s_py  = Declaration(",
+         dc->name.name);
+    }
+    else {
+        builder->appendFormat(depth, "AssignmentStatement(",
+            dc->name.name);
+    }
+    builder->appendFormat("\"%s\", ", dc->name.name);
+    if (dc->initializer)
         visit(dc->initializer);
     else {
         builder->append("z3_reg.instance(\"");
@@ -875,23 +842,14 @@ bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
         visit(dc->type);
         builder->append(")");
     }
-    builder->newline();
-
+    builder->append(")");
     if (!in_local_scope) {
-        builder->appendFormat(depth, "%s_py  = Declaration(lval, rval)",
-         dc->name.name);
-        builder->newline();
-    }
-    else {
-        builder->appendFormat(depth, "%s_py = AssignmentStatement(lval, rval)",
-            dc->name.name);
         builder->newline();
     }
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Declaration_Variable *dv) {
-    builder->appendFormat(depth, "%s_py = ", dv->name.name);
     if (dv->initializer) {
         builder->append("P4Initializer(");
         visit(dv->initializer);
@@ -906,53 +864,29 @@ bool CodeGenToz3::preorder(const IR::Declaration_Variable *dv) {
     if (dv->initializer) {
         builder->append(")");
     }
-    builder->newline();
-    builder->appendFormat(depth, "stmt = AssignmentStatement(\"%s\", %s_py)",
-                    dv->name.name, dv->name.name);
-    builder->newline();
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::SwitchStatement *ss) {
-    // TODO: This also should have context
-    builder->append(depth, "switch_block = SwitchStatement(");
-
+    builder->append("SwitchStatement(");
     visit(ss->expression);
-    builder->append(")\n");
-
+    builder->append(",cases=[");
     // switch case
-    for (size_t i = 0; i < ss->cases.size(); i++)
+    for (size_t i = 0; i < ss->cases.size(); i++) {
         visit(ss->cases.at(i));
-    builder->append(depth, "stmt = switch_block\n\n");
-
+        builder->append(", ");
+    }
+    builder->append("])");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::SwitchCase *sc) {
-    int if_output_def_blk = 0;
 
-    builder->append(depth, "switch_block.add_case(");
+    builder->append("(");
     visit(sc->label);
-    builder->append(")\n");
-
-    if_output_def_blk = sc->statement->is<IR::BlockStatement>() ? 0 : 1;
-
-    if (if_output_def_blk) {
-        builder->append(depth,     "def BLOCK():\n");
-        builder->append(depth + 1, "block = BlockStatement()\n");
-        depth++;
-    }
+    builder->append(", ");
     visit(sc->statement);
-
-    if (if_output_def_blk) {
-        depth--;
-        builder->append(depth + 1, "return block\n");
-        builder->append(depth,     "stmt = BLOCK()\n\n");
-    }
-
-    builder->append(depth, "switch_block.add_stmt_to_case(");
-    visit(sc->label);
-    builder->append(", stmt)\n");
+    builder->append(")");
     return false;
 }
 
@@ -1027,7 +961,8 @@ void CodeGenToz3::emit_args(const IR::Type_StructLike *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Header *t) {
-    builder->appendFormat(depth, "%s_py = ", t->name.name);
+    if (!in_local_scope)
+        builder->appendFormat(depth, "%s_py = ", t->name.name);
     builder->appendFormat("Header(\"%s\", ", t->name.name);
     emit_args(t);
     builder->append(")");
@@ -1037,7 +972,8 @@ bool CodeGenToz3::preorder(const IR::Type_Header *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_HeaderUnion *t) {
-    builder->appendFormat(depth, "%s_py = ", t->name.name);
+    if (!in_local_scope)
+        builder->appendFormat(depth, "%s_py = ", t->name.name);
     builder->appendFormat("HeaderUnion(\"%s\", ", t->name.name);
     emit_args(t);
     builder->append(")");
@@ -1046,7 +982,8 @@ bool CodeGenToz3::preorder(const IR::Type_HeaderUnion *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Struct *t) {
-    builder->appendFormat(depth, "%s_py = ", t->name.name);
+    if (!in_local_scope)
+        builder->appendFormat(depth, "%s_py = ", t->name.name);
     builder->appendFormat("Struct(\"%s\", ", t->name.name);
     emit_args(t);
     builder->append(")");
@@ -1055,7 +992,8 @@ bool CodeGenToz3::preorder(const IR::Type_Struct *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Enum *t) {
-    builder->appendFormat(depth, "%s_py = ", t->name.name);
+    if (!in_local_scope)
+        builder->appendFormat(depth, "%s_py = ", t->name.name);
     builder->appendFormat("Enum(\"%s\", [", t->name.name);
     for (auto m : t->members) {
         visit(m);
@@ -1076,7 +1014,8 @@ bool CodeGenToz3::preorder(const IR::SerEnumMember *m) {
 
 
 bool CodeGenToz3::preorder(const IR::Type_SerEnum *t) {
-    builder->appendFormat(depth, "%s_py = ", t->name.name);
+    if (!in_local_scope)
+        builder->appendFormat(depth, "%s_py = ", t->name.name);
     builder->appendFormat("SerEnum(\"%s\", [", t->name.name);
     for (auto m : t->members) {
         visit(m);
@@ -1085,14 +1024,15 @@ bool CodeGenToz3::preorder(const IR::Type_SerEnum *t) {
 
     builder->append("], ");
     visit(t->type);
-    builder->append("),");
+    builder->append(")");
     builder->newline();
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Error *t) {
     /* We consider a type error to just be an enum */
-    builder->appendFormat(depth, "%s_py = ", t->name.name);
+    if (!in_local_scope)
+        builder->appendFormat(depth, "%s_py = ", t->name.name);
     builder->appendFormat("Enum(\"%s\", [", t->name.name);
     for (auto m : t->members) {
         visit(m);
@@ -1105,20 +1045,29 @@ bool CodeGenToz3::preorder(const IR::Type_Error *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Typedef *t) {
-    builder->appendFormat(depth, "%s_py = Declaration(\"%s\", ",
+    if (!in_local_scope) {
+        builder->appendFormat(depth, "%s_py = Declaration(\"%s\", ",
                           t->name.name, t->name.name);
+    }
+    in_local_scope = true;
     visit(t->type);
-    builder->append(")");
-    builder->newline();
+    in_local_scope = false;
+    if (!in_local_scope) {
+        builder->append(")");
+        builder->newline();
+    }
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Newtype *t) {
-    builder->appendFormat(depth, "%s_py = Declaration(\"%s\", ",
+    if (!in_local_scope)
+        builder->appendFormat(depth, "%s_py = Declaration(\"%s\", ",
                           t->name.name, t->name.name);
     visit(t->type);
-    builder->append(")");
-    builder->newline();
+    if (!in_local_scope) {
+        builder->append(")");
+        builder->newline();
+    }
     return false;
 }
 
@@ -1195,8 +1144,8 @@ bool CodeGenToz3::preorder(const IR::Type_Specialized *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
-    builder->appendFormat(depth, "%s_py = ",
-    di->name.name, di->name.name);
+    if (!in_local_scope)
+        builder->appendFormat(depth, "%s_py = ", di->name.name);
     builder->append("z3_reg._globals[");
     if (auto tp = di->type->to<IR::Type_Specialized>()) {
         builder->appendFormat("\"%s\"", tp->baseType->toString());
@@ -1213,9 +1162,9 @@ bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
             builder->append(", ");
     }
     builder->append(")");
-    builder->newline();
 
     if (!in_local_scope) {
+        builder->newline();
         builder->appendFormat(depth, "%s_py  = Declaration(\"%s\", %s_py)",
                               di->name.name, di->name.name,
                               di->name.name);
