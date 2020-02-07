@@ -53,7 +53,7 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     builder->newline();
     depth++;
 
-    builder->appendFormat(depth, "%s_py = P4Parser(z3_reg, \"%s_state\", [",
+    builder->appendFormat(depth, "%s_py = P4Parser(\"%s_state\", z3_reg, [",
                           parser_name, parser_name);
 
     for (auto cp : p->getApplyParameters()->parameters) {
@@ -174,7 +174,7 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
     in_local_scope = true;
     builder->delim_comment(depth, "CONTROL %s", ctrl_name);
 
-    builder->appendFormat(depth, "%s_py = P4Control(z3_reg,",
+    builder->appendFormat(depth, "%s_py = P4Control(z3_reg=z3_reg,",
                           ctrl_name);
     depth++;
     builder->newline();
@@ -276,7 +276,7 @@ bool CodeGenToz3::preorder(const IR::Function *function) {
 
     if (!in_local_scope)
         builder->appendFormat(depth, "%s_py = ", function_name);
-    builder->appendFormat("P4Function(\"%s\", return_type=", function_name);
+    builder->appendFormat("P4Function(\"%s\", z3_reg, return_type=", function_name);
     visit(function->type->returnType);
     builder->append(", params=[");
     for (auto param : function->getParameters()->parameters) {
@@ -300,7 +300,7 @@ bool CodeGenToz3::preorder(const IR::P4Action *p4action) {
     auto action_name = p4action->name.name;
     if (!in_local_scope)
         builder->appendFormat(depth, "%s_py = ", action_name);
-    builder->appendFormat("P4Action(\"%s\", params=[", action_name);
+    builder->appendFormat("P4Action(\"%s\", z3_reg, params=[", action_name);
     for (auto param : p4action->getParameters()->parameters) {
         visit(param);
         builder->append(", ");
