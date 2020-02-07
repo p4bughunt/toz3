@@ -1152,8 +1152,7 @@ bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
     } else if (auto tn = di->type->to<IR::Type_Name>()) {
         builder->appendFormat("\"%s\"", tn->path->name.name);
     }
-    builder->append("](None, ");
-
+    builder->append("].initialize(");
     for (auto arg: *di->arguments) {
         if (arg->expression != nullptr)
             if (arg->name.name != nullptr)

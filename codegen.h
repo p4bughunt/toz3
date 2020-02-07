@@ -97,7 +97,7 @@ protected:
 
     // TODO: Get rid of all this global state
     // reserved keywords
-    std::set<cstring>key_words      = { "action_run" };
+    std::set<cstring>key_words      = {};
 
     bool in_local_scope  = false;
 
