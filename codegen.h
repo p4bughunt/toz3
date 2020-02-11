@@ -141,6 +141,7 @@ public:
     /***** Parser *****/
     bool preorder(const IR::P4Parser *p) override;
     bool preorder(const IR::ParserState *ps) override;
+    bool preorder(const IR::P4ValueSet *pvs) override;
     bool preorder(const IR::SelectExpression *se) override;
     bool preorder(const IR::SelectCase *se) override;
     /***** Methods *****/

@@ -61,62 +61,65 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
 
     builder->append(depth, "const_params=");
     visit(p->getConstructorParameters());
-    builder->append(",");
-    builder->newline();
-    builder->append(depth, "body=[]");
-
-    // builder->delim_comment(depth, "PARSER %s TREE", parser_name);
-
-    // builder->appendFormat(depth, "%s_parser = ParserTree()", parser_name);
-    // builder->newline();
-    // for (auto s : p->states) {
-    //     auto state_name = s->name.name;
-    //     visit(s);
-    //     builder->appendFormat(depth, "%s_parser.add_state(\"%s\", %s_state)", parser_name, state_name, state_name);
-    //     builder->newline();
-    // }
-    // builder->appendFormat(depth, "tmp_var.add_stmt(%s_parser)",
-    //     parser_name, parser_name);
-    // builder->newline();
 
     builder->append(",");
     builder->newline();
     builder->append(depth,"local_decls=[");
     depth++;
-    // for (auto a : p->parserLocals) {
-    //     builder->newline();
-    //     builder->appendFormat(depth, "P4Declaration(\"%s\", ", a->name.name);
-    //     visit(a);
-    //     builder->append("), ");
-    // }
+    for (auto a : p->parserLocals) {
+        builder->newline();
+        builder->appendFormat(depth, "P4Declaration(\"%s\", ", a->name.name);
+        visit(a);
+        builder->append("), ");
+    }
+    builder->append("],");
     depth--;
-    builder->append("]");
     builder->newline();
+    builder->append(depth, "body=[]");
+    // builder->append(depth, "body=ParserTree([");
+    // builder->newline();
+    // depth++;
+    // for (auto s : p->states) {
+    //     builder->append(depth, "");
+    //     visit(s);
+    //     builder->append(",");
+    //     builder->newline();
+    // }
+    // builder->append(depth, "])");
+    // depth--;
+    // builder->newline();
     depth--;
-    builder->append(depth, ")");
+    builder->append(")");
     in_local_scope = false;
 
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::ParserState *ps) {
-    auto state_name = ps->name.name;
-    builder->appendFormat(depth, "%s_state = ParserState()", state_name);
-    builder->newline();
-    for (auto c : ps->components) {
-        visit(c);
-        builder->appendFormat(depth, "%s_state.add_stmt(stmt)", state_name);
-        builder->newline();
-    }
-    builder->append(depth, "select = ");
+    builder->appendFormat("ParserState(name=\"%s\", select=", ps->name.name);
     if (ps->selectExpression)
         visit(ps->selectExpression);
     else
         builder->append("P4Exit()");
+    builder->append(",");
+    builder->newline();
+    builder->append(depth, "components=[");
+    for (auto c : ps->components) {
+        builder->newline();
+        builder->append(depth, "");
+        visit(c);
+        builder->append(",");
+    }
+    builder->append(depth, "])");
 
-    builder->newline();
-    builder->appendFormat(depth, "%s_state.add_select(select)", state_name);
-    builder->newline();
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::P4ValueSet *pvs) {
+    // Since we declare a symbolic value we only need the type and an instance
+    builder->appendFormat("z3_reg.instance(\"%s\", ", pvs->name.name);
+    visit(pvs->elementType);
+    builder->append(")");
     return false;
 }
 
@@ -755,7 +758,7 @@ bool CodeGenToz3::preorder(const IR::ParameterList *p) {
         builder->newline();
         builder->append(depth, "");
         visit(param);
-        builder->append(", ");
+        builder->append(",");
     }
     depth--;
     builder->append("]");
@@ -770,7 +773,7 @@ bool CodeGenToz3::preorder(const IR::TypeParameters *tp) {
         builder->newline();
         builder->append(depth, "");
         visit(param);
-        builder->append(", ");
+        builder->append(",");
     }
     depth--;
     builder->append("]");
