@@ -237,6 +237,7 @@ public:
     bool preorder(const IR::Type_Void *t) override;
     bool preorder(const IR::Type_Tuple *t) override;
     bool preorder(const IR::Type_InfInt *) override;
+    bool preorder(const IR::Type_Dontcare *) override;
     bool preorder(const IR::Type_String *) override;
     bool preorder(const IR::ArrayIndex *a) override;
 

@@ -1055,8 +1055,20 @@ bool CodeGenToz3::preorder(const IR::Type_InfInt *) {
     return false;
 }
 
+bool CodeGenToz3::preorder(const IR::Type_Dontcare *t) {
+    builder->append("None");
+    return false;
+}
+
+
 bool CodeGenToz3::preorder(const IR::Type_Specialized *t) {
-    builder->appendFormat("\"%s\"", t->baseType->toString());
+    visit(t->baseType);
+    builder->append(".init_type_params(");
+    for (auto arg: *t->arguments) {
+        visit(arg);
+        builder->append(", ");
+    }
+    builder->appendFormat(")");
     return false;
 }
 
@@ -1064,18 +1076,13 @@ bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
     if (!in_local_scope) {
         builder->appendFormat("Declaration(\"%s\", ", di->name.name);
     }
-    builder->append("z3_reg._globals[");
-    if (auto tp = di->type->to<IR::Type_Specialized>()) {
-        builder->appendFormat("\"%s\"", tp->baseType->toString());
-    } else if (auto tn = di->type->to<IR::Type_Name>()) {
-        builder->appendFormat("\"%s\"", tn->path->name.name);
-    }
-    builder->append("].initialize(");
+    visit(di->type);
+    builder->append(".initialize(");
     for (auto arg: *di->arguments) {
-        if (arg->expression != nullptr)
             if (arg->name.name != nullptr)
                 builder->appendFormat("%s=", arg->name.name);
             visit(arg->expression);
+        if (arg->expression != nullptr)
             builder->append(", ");
     }
     builder->append(")");
