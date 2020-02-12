@@ -332,8 +332,13 @@ bool CodeGenToz3::preorder(const IR::ExpressionValue *ev) {
 bool CodeGenToz3::preorder(const IR::MethodCallExpression *mce) {
     builder->append("MethodCallExpr(");
     visit(mce->method);
+    builder->append(", [");
+    for (auto arg : *mce->typeArguments) {
+        visit(arg);
+        builder->append(", ");
+    }
+    builder->append("]");
     builder->append(", ");
-
     for (auto arg : *mce->arguments) {
         visit(arg);
         builder->append(", ");
