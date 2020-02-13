@@ -906,28 +906,28 @@ void CodeGenToz3::emit_args(const IR::Type_StructLike *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Header *t) {
-    builder->appendFormat("Header(\"%s\", ", t->name.name);
+    builder->appendFormat("Header(z3_reg, \"%s\", ", t->name.name);
     emit_args(t);
     builder->append(")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_HeaderUnion *t) {
-    builder->appendFormat("HeaderUnion(\"%s\", ", t->name.name);
+    builder->appendFormat("HeaderUnion(z3_reg, \"%s\", ", t->name.name);
     emit_args(t);
     builder->append(")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Struct *t) {
-    builder->appendFormat("Struct(\"%s\", ", t->name.name);
+    builder->appendFormat("Struct(z3_reg, \"%s\", ", t->name.name);
     emit_args(t);
     builder->append(")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Enum *t) {
-    builder->appendFormat("Enum(\"%s\", [", t->name.name);
+    builder->appendFormat("Enum(z3_reg, \"%s\", [", t->name.name);
     for (auto m : t->members) {
         visit(m);
         builder->append(", ");
@@ -946,7 +946,7 @@ bool CodeGenToz3::preorder(const IR::SerEnumMember *m) {
 
 
 bool CodeGenToz3::preorder(const IR::Type_SerEnum *t) {
-    builder->appendFormat("SerEnum(\"%s\", [", t->name.name);
+    builder->appendFormat("SerEnum(z3_reg, \"%s\", [", t->name.name);
     for (auto m : t->members) {
         visit(m);
         builder->append(", ");
@@ -960,7 +960,7 @@ bool CodeGenToz3::preorder(const IR::Type_SerEnum *t) {
 
 bool CodeGenToz3::preorder(const IR::Type_Error *t) {
     /* We consider a type error to just be an enum */
-    builder->appendFormat("Enum(\"%s\", [", t->name.name);
+    builder->appendFormat("Enum(z3_reg, \"%s\", [", t->name.name);
     for (auto m : t->members) {
         visit(m);
         builder->append(", ");
