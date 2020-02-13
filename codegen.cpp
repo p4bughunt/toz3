@@ -695,7 +695,6 @@ bool CodeGenToz3::preorder(const IR::DefaultExpression *) {
 }
 
 bool CodeGenToz3::preorder(const IR::Constant *c) {
-    // Ideally we would like to define a z3 var here and then interpret it
     // so we just need to call visit()
     // Unfortunately, z3 python does not handle Var declarations nicely
     // So for now we need to do hardcoded checks.
@@ -798,7 +797,7 @@ bool CodeGenToz3::preorder(const IR::Argument *arg) {
 
 bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
     if (!in_local_scope)
-        builder->appendFormat("Declaration(\"%s\", ", dc->name.name);
+        builder->appendFormat("P4Declaration(\"%s\", ", dc->name.name);
     if (dc->initializer)
         visit(dc->initializer);
     else {
@@ -973,7 +972,7 @@ bool CodeGenToz3::preorder(const IR::Type_Error *t) {
 
 bool CodeGenToz3::preorder(const IR::Type_Typedef *t) {
     if (!in_local_scope)
-        builder->appendFormat("Declaration(\"%s\", ", t->name.name);
+        builder->appendFormat("P4Declaration(\"%s\", ", t->name.name);
     in_local_scope = true;
     visit(t->type);
     in_local_scope = false;
@@ -985,7 +984,7 @@ bool CodeGenToz3::preorder(const IR::Type_Typedef *t) {
 
 bool CodeGenToz3::preorder(const IR::Type_Newtype *t) {
     if (!in_local_scope)
-        builder->appendFormat("Declaration(\"%s\", ", t->name.name);
+        builder->appendFormat("P4Declaration(\"%s\", ", t->name.name);
     visit(t->type);
     if (!in_local_scope) {
         builder->append(")");
@@ -1028,6 +1027,13 @@ bool CodeGenToz3::preorder(const IR::Type_Varbits *t) { \
     return false;
 }
 
+bool CodeGenToz3::preorder(const IR::Type_Stack *type) {
+    builder->append("z3_reg.stack(");
+    visit(type->elementType);
+    builder->appendFormat(", %d)", type->getSize());
+    return false;
+}
+
 bool CodeGenToz3::preorder(const IR::Type_Tuple *t) {
     builder->append("[");
     for (auto c : t->components) {
@@ -1048,12 +1054,6 @@ bool CodeGenToz3::preorder(const IR::Type_Var *t) {
     return false;
 }
 
-bool CodeGenToz3::preorder(const IR::Type_Stack *type) {
-    builder->append("z3_reg.stack(");
-    visit(type->elementType);
-    builder->appendFormat(", %d)", type->getSize());
-    return false;
-}
 
 bool CodeGenToz3::preorder(const IR::Type_InfInt *) {
     builder->append("z3.IntSort()");
@@ -1079,7 +1079,7 @@ bool CodeGenToz3::preorder(const IR::Type_Specialized *t) {
 
 bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
     if (!in_local_scope) {
-        builder->appendFormat("Declaration(\"%s\", ", di->name.name);
+        builder->appendFormat("P4Declaration(\"%s\", ", di->name.name);
     }
     visit(di->type);
     builder->append(".initialize(");
