@@ -349,15 +349,11 @@ bool CodeGenToz3::preorder(const IR::MethodCallExpression *mce) {
 }
 
 bool CodeGenToz3::preorder(const IR::ListExpression *le) {
-    bool first = true;
 
     builder->append("[");
-
     for (auto e : le->components) {
-        if (!first)
-            builder->append(", ");
-        first = false;
         visit(e);
+        builder->append(", ");
     }
     builder->append("]");
     return false;
@@ -1035,12 +1031,14 @@ bool CodeGenToz3::preorder(const IR::Type_Stack *type) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Tuple *t) {
-    builder->append("[");
+    // This is a dummy type, not sure how to name it
+    // TODO: Figure out a better way to instantiate
+    builder->append("ListType(z3_reg, \"\", [");
     for (auto c : t->components) {
         visit(c);
         builder->append(", ");
     }
-    builder->append("]");
+    builder->append("])");
     return false;
 }
 
