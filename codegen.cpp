@@ -1033,7 +1033,7 @@ bool CodeGenToz3::preorder(const IR::Type_Stack *type) {
 bool CodeGenToz3::preorder(const IR::Type_Tuple *t) {
     // This is a dummy type, not sure how to name it
     // TODO: Figure out a better way to instantiate
-    builder->append("ListType(z3_reg, \"\", [");
+    builder->append("ListType(z3_reg, \"tuple\", [");
     for (auto c : t->components) {
         visit(c);
         builder->append(", ");
