@@ -15,8 +15,10 @@ class toz3Options : public CompilerOptions {
 public:
     toz3Options();
     // output file
-    cstring o_file;
+    cstring o_file = nullptr;
+    cstring p4_o_file = nullptr;
     // input file is in CompilerOptions file
+    int flag_rd_remove = 0;
 };
 
 using P4toZ3Context = P4CContextWithOptions<toz3Options>;

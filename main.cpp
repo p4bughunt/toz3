@@ -22,6 +22,7 @@
 
 #include "toz3Options.h"
 #include "codegen.h"
+#include "randRemove.h"
 
 
 #ifndef DEBUG
@@ -52,6 +53,14 @@ int main(int argc, char *const argv[]) {
     if (ostream == nullptr) {
         ::error("must have --output [file]");
         return 1;
+    }
+    std::ostream* p4_ostream = nullptr;
+    if (options.p4_o_file != nullptr) {
+        p4_ostream = openFile(options.p4_o_file, false);
+        if (p4_ostream == nullptr) {
+            ::error("can not open p4 file");
+            return 1;
+        }
     }
 
     auto hook = options.getDebugHook();
@@ -89,8 +98,18 @@ int main(int argc, char *const argv[]) {
             P4::P4COptionPragmaParser optionsPragmaParser;
             program->apply(P4::ApplyOptionsPragmas(optionsPragmaParser));
 
+            if (options.flag_rd_remove!=0) {
+                TOZ3::DoRandRemove* rdr = new TOZ3::DoRandRemove();
+                program = program->apply(*rdr);
+            }
+
             TOZ3::CodeGenToz3* cgt3 = new TOZ3::CodeGenToz3(0, ostream);
             program->apply(*cgt3);
+
+            if (options.p4_o_file!=nullptr) {
+                TOZ3::SubToP4* top4 = new TOZ3::SubToP4(p4_ostream, false);
+                program->apply(*top4);
+            }
         } catch (const Util::P4CExceptionBase &bug) {
             std::cerr << bug.what() << std::endl;
             return 1;

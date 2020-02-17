@@ -7,8 +7,12 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/version.h.cmake"
 set (TOZ3_SRCS
     toz3Options.cpp
     toz3Options.h
-  codegen.cpp
-  codegen.h
+    codegen.cpp
+    codegen.h
+    randRemove.cpp
+    randRemove.h
+    sub_toP4.cpp
+    sub_toP4.h
     main.cpp
     )
 add_cpplint_files (${CMAKE_CURRENT_SOURCE_DIR} "${TOZ3_SRCS}")
