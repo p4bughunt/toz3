@@ -96,8 +96,6 @@ class CodeGenToz3 : public Inspector {
 protected:
 
     // TODO: Get rid of all this global state
-    // reserved keywords
-    std::set<cstring>key_words      = {};
 
     bool in_local_scope  = false;
 
