@@ -1,3 +1,5 @@
+#include <fstream>
+
 #include "frontends/common/applyOptionsPragmas.h"
 #include "frontends/common/parseInput.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
@@ -30,12 +32,32 @@
 #endif
 
 
+unsigned int good_seed() {
+    unsigned int random_seed, random_seed_a, random_seed_b;
+    std::ifstream file ("/dev/urandom", std::ios::binary);
+    if (file.is_open()) {
+        char * memblock;
+        int size = sizeof(int);
+        memblock = new char [size];
+        file.read (memblock, size);
+        file.close();
+        random_seed_a = *reinterpret_cast<int*>(memblock);
+        delete[] memblock;
+    } else {
+        random_seed_a = 0;
+    }
+    random_seed_b = std::time(0);
+    random_seed = random_seed_a xor random_seed_b;
+    return random_seed;
+}
+
+
 int main(int argc, char *const argv[]) {
     setup_gc_logging();
 
     AutoCompileContext autoP4toZ3Context(new P4TOZ3::P4toZ3Context);
     auto& options = P4TOZ3::P4toZ3Context::get().options();
-    // we only handles P4_16 right now
+    // we only handle P4_16 right now
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.compilerVersion = "p4toz3 test";
 
@@ -53,14 +75,6 @@ int main(int argc, char *const argv[]) {
     if (ostream == nullptr) {
         ::error("must have --output [file]");
         return 1;
-    }
-    std::ostream* p4_ostream = nullptr;
-    if (options.p4_o_file != nullptr) {
-        p4_ostream = openFile(options.p4_o_file, false);
-        if (p4_ostream == nullptr) {
-            ::error("can not open p4 file");
-            return 1;
-        }
     }
 
     auto hook = options.getDebugHook();
@@ -98,15 +112,20 @@ int main(int argc, char *const argv[]) {
             P4::P4COptionPragmaParser optionsPragmaParser;
             program->apply(P4::ApplyOptionsPragmas(optionsPragmaParser));
 
-            if (options.flag_rd_remove!=0) {
+            // if the prune flag is enable, remove statements randomly
+            if (options.do_rnd_prune) {
+                srand(good_seed());
                 TOZ3::DoRandRemove* rdr = new TOZ3::DoRandRemove();
                 program = program->apply(*rdr);
             }
 
+            // convert the P4 program to Z3 Python
             TOZ3::CodeGenToz3* cgt3 = new TOZ3::CodeGenToz3(0, ostream);
             program->apply(*cgt3);
 
-            if (options.p4_o_file!=nullptr) {
+            // if the emit flag is enabled, also emit the new p4 version
+            if (options.emit_p4) {
+                auto p4_ostream = openFile(options.o_file + ".p4", false);
                 TOZ3::SubToP4* top4 = new TOZ3::SubToP4(p4_ostream, false);
                 program->apply(*top4);
             }

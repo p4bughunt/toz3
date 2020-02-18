@@ -7,12 +7,12 @@ toz3Options::toz3Options() {
     registerOption("--output", "file",
                    [this](const char* arg) { o_file = arg; return true; },
                    "The translated Z3 file.");
-    registerOption("--p4output", "p4file",
-                   [this](const char* arg) { p4_o_file = arg; return true; },
-                   "The p4 file after random remove.");
-    registerOption("--flag_rd_remove", "flag",
-                   [this](const char* arg) { flag_rd_remove = atoi(arg); return true; },
-                   "The flag whether to use random remove.");
+    registerOption("--emit_p4", nullptr,
+                   [this](const char*) { emit_p4 = true; return true; },
+                   "Whether to emit a p4 file after.");
+    registerOption("--prune", nullptr,
+                   [this](const char*) { do_rnd_prune = true; return true; },
+                   "Enable random removal of statements.");
 }
 
 } // namespace

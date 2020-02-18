@@ -16,9 +16,9 @@ public:
     toz3Options();
     // output file
     cstring o_file = nullptr;
-    cstring p4_o_file = nullptr;
+    bool emit_p4 = false;
     // input file is in CompilerOptions file
-    int flag_rd_remove = 0;
+    bool do_rnd_prune = false;
 };
 
 using P4toZ3Context = P4CContextWithOptions<toz3Options>;

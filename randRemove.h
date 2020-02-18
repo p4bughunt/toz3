@@ -20,7 +20,9 @@ public:
     ~DoRandRemove() {
     }
 
-    const IR::Node* preorder(IR::Statement* stat);
+    const IR::Node* preorder(IR::Statement *s);
+    const IR::Node* preorder(IR::BlockStatement *s);
+    const IR::Node* preorder(IR::ReturnStatement *s);
 
 
 };
