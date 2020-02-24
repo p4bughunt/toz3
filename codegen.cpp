@@ -893,21 +893,21 @@ void CodeGenToz3::emit_args(const IR::Type_StructLike *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Header *t) {
-    builder->appendFormat("Header(z3_reg, \"%s\", ", t->name.name);
+    builder->appendFormat("HeaderType(z3_reg, \"%s\", ", t->name.name);
     emit_args(t);
     builder->append(")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_HeaderUnion *t) {
-    builder->appendFormat("HeaderUnion(z3_reg, \"%s\", ", t->name.name);
+    builder->appendFormat("HeaderUnionType(z3_reg, \"%s\", ", t->name.name);
     emit_args(t);
     builder->append(")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Struct *t) {
-    builder->appendFormat("Struct(z3_reg, \"%s\", ", t->name.name);
+    builder->appendFormat("StructType(z3_reg, \"%s\", ", t->name.name);
     emit_args(t);
     builder->append(")");
     return false;
