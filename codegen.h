@@ -223,7 +223,8 @@ public:
     bool preorder(const IR::Type_Parser *) override;
     bool preorder(const IR::Type_Control *) override;
 
-    bool preorder(const IR::Type_Extern *) override;
+    bool preorder(const IR::Type_Extern *t) override;
+    bool preorder(const IR::Type_Method *t) override;
     bool preorder(const IR::Type_Typedef *t) override;
     bool preorder(const IR::Type_Newtype *t) override;
     bool preorder(const IR::Type_Bits *t) override;

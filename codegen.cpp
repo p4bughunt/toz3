@@ -209,15 +209,24 @@ bool CodeGenToz3::preorder(const IR::Type_Extern *t) {
     return false;
 }
 
+bool CodeGenToz3::preorder(const IR::Type_Method *t) {
+    builder->append("(");
+    if (t->returnType)
+        visit(t->returnType);
+    else
+        builder->append("None");
+    builder->append(", ");
+    visit(t->typeParameters);
+    builder->append(")");
+    return false;
+}
+
+
 bool CodeGenToz3::preorder(const IR::Method *t) {
     auto method_name = t->name.name;
 
-    builder->appendFormat("P4Method(\"%s\", z3_reg, return_type=", method_name);
-    if (t->type->returnType)
-        visit(t->type->returnType);
-    else
-        builder->append("None");
-
+    builder->appendFormat("P4Method(\"%s\", z3_reg, type_params=", method_name);
+    visit(t->type);
     builder->append(", params=");
     visit(t->getParameters());
     builder->append(")");
