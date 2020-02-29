@@ -117,7 +117,7 @@ bool CodeGenToz3::preorder(const IR::ParserState *ps) {
 
 bool CodeGenToz3::preorder(const IR::P4ValueSet *pvs) {
     // Since we declare a symbolic value we only need the type and an instance
-    builder->appendFormat("z3_reg.instance(\"%s\", ", pvs->name.name);
+    builder->appendFormat("gen_instance(\"%s\", ", pvs->name.name);
     visit(pvs->elementType);
     builder->append(")");
     return false;
@@ -195,7 +195,7 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
 bool CodeGenToz3::preorder(const IR::Type_Extern *t) {
     auto extern_name = t->name.name;
 
-    builder->appendFormat("P4Extern(\"%s\", z3_reg, type_params=", extern_name);
+    builder->appendFormat("P4Extern(\"%s\", type_params=", extern_name);
     visit(t->getTypeParameters());
     builder->append(", methods=[");
 
@@ -677,7 +677,7 @@ bool CodeGenToz3::preorder(const IR::StructInitializerExpression *sie) {
         visit(c);
         builder->append(", ");
     }
-    builder->appendFormat("], z3_reg.instance(\"%s\", ", sie_name);
+    builder->appendFormat("], gen_instance(\"%s\", ", sie_name);
     visit(sie->typeName);
     builder->append("))");
 
@@ -797,7 +797,7 @@ bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
     if (dc->initializer)
         visit(dc->initializer);
     else {
-        builder->append("z3_reg.instance(\"");
+        builder->append("gen_instance(\"");
         builder->append(dc->name.name);
         builder->append("\", ");
         visit(dc->type);
@@ -814,7 +814,7 @@ bool CodeGenToz3::preorder(const IR::Declaration_Variable *dv) {
         visit(dv->initializer);
         builder->append(", ");
     }
-    builder->append("z3_reg.instance(\"");
+    builder->append("gen_instance(\"");
     builder->append(dv->name.name);
     builder->append("\", ");
     visit(dv->type);
@@ -862,7 +862,7 @@ bool CodeGenToz3::preorder(const IR::Declaration_ID *di) {
 bool CodeGenToz3::preorder(const IR::Type_Control *t) {
     auto ctrl_name = t->name.name;
 
-    builder->appendFormat("P4Extern(\"%s\", z3_reg, type_params=", ctrl_name, ctrl_name);
+    builder->appendFormat("P4Extern(\"%s\", type_params=", ctrl_name, ctrl_name);
     visit(t->applyParams);
     builder->append(")");
 
@@ -872,7 +872,7 @@ bool CodeGenToz3::preorder(const IR::Type_Control *t) {
 bool CodeGenToz3::preorder(const IR::Type_Parser *t) {
     auto parser_name = t->name.name;
 
-    builder->appendFormat("P4Extern(\"%s\", z3_reg, type_params=",
+    builder->appendFormat("P4Extern(\"%s\", type_params=",
                           parser_name,
                           parser_name);
     visit(t->applyParams);
@@ -902,28 +902,28 @@ void CodeGenToz3::emit_args(const IR::Type_StructLike *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Header *t) {
-    builder->appendFormat("HeaderType(z3_reg, \"%s\", ", t->name.name);
+    builder->appendFormat("HeaderType(\"%s\", ", t->name.name);
     emit_args(t);
     builder->append(")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_HeaderUnion *t) {
-    builder->appendFormat("HeaderUnionType(z3_reg, \"%s\", ", t->name.name);
+    builder->appendFormat("HeaderUnionType(\"%s\", ", t->name.name);
     emit_args(t);
     builder->append(")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Struct *t) {
-    builder->appendFormat("StructType(z3_reg, \"%s\", ", t->name.name);
+    builder->appendFormat("StructType(\"%s\", ", t->name.name);
     emit_args(t);
     builder->append(")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Enum *t) {
-    builder->appendFormat("Enum(z3_reg, \"%s\", [", t->name.name);
+    builder->appendFormat("Enum( \"%s\", [", t->name.name);
     for (auto m : t->members) {
         visit(m);
         builder->append(", ");
@@ -942,7 +942,7 @@ bool CodeGenToz3::preorder(const IR::SerEnumMember *m) {
 
 
 bool CodeGenToz3::preorder(const IR::Type_SerEnum *t) {
-    builder->appendFormat("SerEnum(z3_reg, \"%s\", [", t->name.name);
+    builder->appendFormat("SerEnum( \"%s\", [", t->name.name);
     for (auto m : t->members) {
         visit(m);
         builder->append(", ");
@@ -956,7 +956,7 @@ bool CodeGenToz3::preorder(const IR::Type_SerEnum *t) {
 
 bool CodeGenToz3::preorder(const IR::Type_Error *t) {
     /* We consider a type error to just be an enum */
-    builder->appendFormat("Enum(z3_reg, \"%s\", [", t->name.name);
+    builder->appendFormat("Enum( \"%s\", [", t->name.name);
     for (auto m : t->members) {
         visit(m);
         builder->append(", ");
@@ -1033,7 +1033,7 @@ bool CodeGenToz3::preorder(const IR::Type_Stack *type) {
 bool CodeGenToz3::preorder(const IR::Type_Tuple *t) {
     // This is a dummy type, not sure how to name it
     // TODO: Figure out a better way to instantiate
-    builder->append("ListType(z3_reg, \"tuple\", [");
+    builder->append("ListType(\"tuple\", [");
     for (auto c : t->components) {
         visit(c);
         builder->append(", ");
@@ -1058,7 +1058,7 @@ bool CodeGenToz3::preorder(const IR::Type_InfInt *) {
     return false;
 }
 
-bool CodeGenToz3::preorder(const IR::Type_Dontcare *t) {
+bool CodeGenToz3::preorder(const IR::Type_Dontcare *) {
     builder->append("None");
     return false;
 }
