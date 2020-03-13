@@ -667,19 +667,23 @@ bool CodeGenToz3::preorder(const IR::NamedExpression *ne) {
 }
 
 bool CodeGenToz3::preorder(const IR::StructInitializerExpression *sie) {
-    auto sie_name = sie->typeName->path->name.name;
     IR::IndexedVector<IR::NamedExpression> components;
 
-    builder->appendFormat("P4Initializer(", sie_name);
+    builder->appendFormat("P4Initializer(");
     builder->append("[");
 
     for (auto c : sie->components) {
         visit(c);
         builder->append(", ");
     }
-    builder->appendFormat("], gen_instance(\"%s\", ", sie_name);
-    visit(sie->typeName);
-    builder->append("))");
+    builder->append("], ");
+    if (sie->typeName) {
+        auto sie_name = sie->typeName->path->name.name;
+        builder->appendFormat("gen_instance(\"%s\", ", sie_name);
+        visit(sie->typeName);
+        builder->append(")");
+    }
+    builder->append(")");
 
     return false;
 }
@@ -1082,11 +1086,8 @@ bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
     visit(di->type);
     builder->append(".initialize(");
     for (auto arg: *di->arguments) {
-            if (arg->name.name != nullptr)
-                builder->appendFormat("%s=", arg->name.name);
-            visit(arg->expression);
-        if (arg->expression != nullptr)
-            builder->append(", ");
+        visit(arg);
+        builder->append(", ");
     }
     builder->append(")");
     if (!in_local_scope)
