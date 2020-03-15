@@ -738,7 +738,7 @@ bool CodeGenToz3::preorder(const IR::Parameter *p) {
      * (2) type
      * (3) id for name
      */
-    builder->append("(");
+    builder->append("P4Parameter(");
 
     if (p->direction == IR::Direction::InOut)
         builder->append("\"inout\", ");
