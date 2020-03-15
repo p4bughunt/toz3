@@ -657,7 +657,13 @@ bool CodeGenToz3::preorder(const IR::TypeNameExpression *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::ConstructorCallExpression *cce) {
-    builder->appendFormat("\"%s\"", cce->toString());
+    //TODO: What do we do about constructedType? Do not really need it
+    builder->appendFormat("ConstCallExpr(\"%s\", ", cce->toString());
+    for (auto arg : *cce->arguments) {
+        visit(arg);
+        builder->append(", ");
+    }
+    builder->append(")");
     return false;
 }
 
