@@ -107,7 +107,11 @@ bool CodeGenToz3::preorder(const IR::ParserState *ps) {
     for (auto c : ps->components) {
         builder->newline();
         builder->append(depth, "");
+        if (auto dc = c->to<IR::Declaration>())
+            builder->appendFormat("P4Declaration(\"%s\", ", dc->name.name);
         visit(c);
+        if (c->is<IR::Declaration>())
+            builder->append(")");
         builder->append(",");
     }
     builder->append(depth, "])");
@@ -696,7 +700,7 @@ bool CodeGenToz3::preorder(const IR::StructInitializerExpression *sie) {
 
 
 bool CodeGenToz3::preorder(const IR::DefaultExpression *) {
-    builder->appendFormat("\"default\"");
+    builder->append("DefaultExpression()");
     return false;
 }
 
