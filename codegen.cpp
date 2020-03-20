@@ -75,19 +75,19 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     builder->append("],");
     depth--;
     builder->newline();
-    builder->append(depth, "body=[]");
-    // builder->append(depth, "body=ParserTree([");
-    // builder->newline();
-    // depth++;
-    // for (auto s : p->states) {
-    //     builder->append(depth, "");
-    //     visit(s);
-    //     builder->append(",");
-    //     builder->newline();
-    // }
-    // builder->append(depth, "])");
-    // depth--;
-    // builder->newline();
+    // builder->append(depth, "body=[]");
+    builder->append(depth, "body=ParserTree([");
+    builder->newline();
+    depth++;
+    for (auto s : p->states) {
+        builder->append(depth, "");
+        visit(s);
+        builder->append(",");
+        builder->newline();
+    }
+    builder->append(depth, "])");
+    depth--;
+    builder->newline();
     depth--;
     builder->append(")");
     in_local_scope = false;
