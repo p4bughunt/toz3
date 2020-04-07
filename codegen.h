@@ -1,16 +1,15 @@
 #ifndef _TOZ3_CODEGEN_H_
 #define _TOZ3_CODEGEN_H_
 
-#include <vector>
 #include <map>
+#include <vector>
 
 #include "ir/ir.h"
 #include "lib/sourceCodeBuilder.h"
 
 namespace TOZ3 {
 class SourceBuilder {
-public:
-
+  public:
     Util::SourceCodeBuilder *builder = nullptr;
 
     static cstring indent(int dep) {
@@ -22,17 +21,11 @@ public:
         return ss.str();
     }
 
-    SourceBuilder() {
-        builder = new Util::SourceCodeBuilder();
-    }
+    SourceBuilder() { builder = new Util::SourceCodeBuilder(); }
 
-    std::string toString() {
-        return builder->toString();
-    }
+    std::string toString() { return builder->toString(); }
 
-    void append(cstring str) {
-        builder->append(str);
-    }
+    void append(cstring str) { builder->append(str); }
 
     void append(int dep, cstring str) {
         builder->appendFormat("%s%s", indent(dep), str);
@@ -78,45 +71,34 @@ public:
         newline();
     }
 
-    void newline() {
-        append("\n");
-    }
+    void newline() { append("\n"); }
 
-    void newline(int dep) {
-        appendFormat("%s\n", indent(dep));
-    }
+    void newline(int dep) { appendFormat("%s\n", indent(dep)); }
 
-    cstring emit() {
-        return builder->toString();
-    }
+    cstring emit() { return builder->toString(); }
 };
 
-
 class CodeGenToz3 : public Inspector {
-protected:
-
+  protected:
     // TODO: Get rid of all this global state
 
-    bool in_local_scope  = false;
+    bool in_local_scope = false;
 
-public:
-
+  public:
     int depth;
     std::ostream *outStream = nullptr;
-    SourceBuilder *builder  = nullptr;
+    SourceBuilder *builder = nullptr;
 
-    CodeGenToz3(int dep, std::ostream *ostream) :
-        depth(dep), outStream(ostream) {
+    CodeGenToz3(int dep, std::ostream *ostream)
+        : depth(dep), outStream(ostream) {
         visitDagOnce = false;
-        builder      = new SourceBuilder();
+        builder = new SourceBuilder();
     }
 
     // for initialization and ending
     Visitor::profile_t init_apply(const IR::Node *node) override;
-    void               end_apply(const IR::Node *node) override;
-    cstring            emit() {
-        return builder->emit();
-    }
+    void end_apply(const IR::Node *node) override;
+    cstring emit() { return builder->emit(); }
 
     /***** Unimplemented *****/
     bool preorder(const IR::Node *expr) override {
@@ -208,7 +190,6 @@ public:
     bool preorder(const IR::Slice *s) override;
     bool preorder(const IR::Mux *) override;
 
-
     /***** Types *****/
     bool preorder(const IR::Type_Package *) override;
 
@@ -246,13 +227,9 @@ public:
     bool preorder(const IR::Declaration_Variable *dv) override;
     bool preorder(const IR::Declaration_Constant *dv) override;
 
-
     /********************************************************************/
     /* Skip these types for now*/
-    bool preorder(const IR::Declaration_MatchKind *) override {
-        return false;
-    }
-
+    bool preorder(const IR::Declaration_MatchKind *) override { return false; }
 };
 } // namespace TOZ3
 

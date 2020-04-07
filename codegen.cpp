@@ -22,19 +22,19 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
     builder->newline();
 
     // Start to visit the actual AST objects
-    for (auto o: p->objects) {
+    for (auto o : p->objects) {
         builder->append(depth, "z3_reg.declare_global(");
         builder->newline();
         depth++;
-        builder->append(depth,"");
+        builder->append(depth, "");
         visit(o);
         depth--;
         builder->newline();
         builder->append(depth, ")");
         builder->newline();
     }
-    builder->appendFormat(depth,
-                          "return z3_reg._globals[\"main\"] if \"main\" in z3_reg._globals else None");
+    builder->appendFormat(depth, "return z3_reg._globals[\"main\"] if \"main\" "
+                                 "in z3_reg._globals else None");
     builder->newline();
     depth = 0;
     return false;
@@ -54,7 +54,6 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     builder->newline();
     builder->append(depth, "params=");
 
-
     visit(p->getApplyParameters());
     builder->append(",");
     builder->newline();
@@ -64,7 +63,7 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
 
     builder->append(",");
     builder->newline();
-    builder->append(depth,"local_decls=[");
+    builder->append(depth, "local_decls=[");
     depth++;
     for (auto a : p->parserLocals) {
         builder->newline();
@@ -131,7 +130,7 @@ bool CodeGenToz3::preorder(const IR::SelectExpression *se) {
     builder->append("ParserSelect(");
     visit(se->select);
     builder->append(", ");
-    for (auto c: se->selectCases) {
+    for (auto c : se->selectCases) {
         visit(c);
         builder->append(", ");
     }
@@ -148,7 +147,6 @@ bool CodeGenToz3::preorder(const IR::SelectCase *sc) {
     return false;
 }
 
-
 bool CodeGenToz3::preorder(const IR::P4Control *c) {
     auto ctrl_name = c->name.name;
 
@@ -163,7 +161,6 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
     builder->newline();
     builder->append(depth, "params=");
 
-
     visit(c->getApplyParameters());
     builder->append(",");
     builder->newline();
@@ -177,7 +174,7 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
     visit(c->body);
     builder->append(",");
     builder->newline();
-    builder->append(depth,"local_decls=[");
+    builder->append(depth, "local_decls=[");
     depth++;
     for (auto a : c->controlLocals) {
         builder->newline();
@@ -225,7 +222,6 @@ bool CodeGenToz3::preorder(const IR::Type_Method *t) {
     return false;
 }
 
-
 bool CodeGenToz3::preorder(const IR::Method *t) {
     auto method_name = t->name.name;
 
@@ -240,16 +236,17 @@ bool CodeGenToz3::preorder(const IR::Method *t) {
 bool CodeGenToz3::preorder(const IR::Function *function) {
     auto function_name = function->name.name;
 
-    builder->appendFormat("P4Function(\"%s\", z3_reg, return_type=", function_name);
+    builder->appendFormat("P4Function(\"%s\", z3_reg, return_type=",
+                          function_name);
     visit(function->type->returnType);
     builder->append(", params=");
     visit(function->getParameters());
     builder->append(", "),
 
-    builder->appendFormat(depth, "body=", function_name);
-    in_local_scope=true;
+        builder->appendFormat(depth, "body=", function_name);
+    in_local_scope = true;
     visit(function->body);
-    in_local_scope=false;
+    in_local_scope = false;
     builder->append(depth, ")");
     return false;
 }
@@ -260,7 +257,7 @@ bool CodeGenToz3::preorder(const IR::P4Action *p4action) {
     visit(p4action->getParameters());
     builder->append(", "),
 
-    builder->appendFormat(depth, "body=", action_name);
+        builder->appendFormat(depth, "body=", action_name);
     visit(p4action->body);
     builder->append(depth, ")");
     return false;
@@ -286,7 +283,7 @@ bool CodeGenToz3::preorder(const IR::Property *p) {
 
 bool CodeGenToz3::preorder(const IR::ActionList *acl) {
     builder->append("[");
-    for (auto act: acl->actionList) {
+    for (auto act : acl->actionList) {
         bool ignore_default = false;
         for (const auto *anno : act->getAnnotations()->annotations) {
             if (anno->name.name == "defaultonly") {
@@ -314,7 +311,7 @@ bool CodeGenToz3::preorder(const IR::Entry *e) {
 bool CodeGenToz3::preorder(const IR::EntriesList *el) {
     // Tao: a trick here
     builder->append("[");
-    for (auto entry: el->entries) {
+    for (auto entry : el->entries) {
         visit(entry);
         builder->append(", ");
     }
@@ -389,7 +386,7 @@ bool CodeGenToz3::preorder(const IR::BlockStatement *b) {
     builder->append("]");
     depth--;
     builder->newline();
-    builder->append(depth,")");
+    builder->append(depth, ")");
 
     return false;
 }
@@ -661,7 +658,7 @@ bool CodeGenToz3::preorder(const IR::TypeNameExpression *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::ConstructorCallExpression *cce) {
-    //TODO: What do we do about constructedType? Do not really need it
+    // TODO: What do we do about constructedType? Do not really need it
     builder->appendFormat("ConstCallExpr(\"%s\", ", cce->toString());
     for (auto arg : *cce->arguments) {
         visit(arg);
@@ -698,7 +695,6 @@ bool CodeGenToz3::preorder(const IR::StructInitializerExpression *sie) {
     return false;
 }
 
-
 bool CodeGenToz3::preorder(const IR::DefaultExpression *) {
     builder->append("DefaultExpression()");
     return false;
@@ -713,15 +709,13 @@ bool CodeGenToz3::preorder(const IR::Constant *c) {
     // builder->append(")");
     if (auto tb = c->type->to<IR::Type_Bits>())
         if (tb->isSigned)
-            builder->appendFormat("Z3Int(%s, %d)",
-                                  c->toString(), tb->size);
+            builder->appendFormat("Z3Int(%s, %d)", c->toString(), tb->size);
         else
-            builder->appendFormat("z3.BitVecVal(%s, %d)",
-                                  c->toString(), tb->size);
+            builder->appendFormat("z3.BitVecVal(%s, %d)", c->toString(),
+                                  tb->size);
     else if (c->type->is<IR::Type_InfInt>()) {
         builder->appendFormat("Z3Int(%s)", c->toString());
-    }
-    else
+    } else
         FATAL_ERROR("Constant Node %s not implemented!",
                     c->type->node_type_name());
     return false;
@@ -794,7 +788,6 @@ bool CodeGenToz3::preorder(const IR::TypeParameters *tp) {
 
     return false;
 }
-
 
 bool CodeGenToz3::preorder(const IR::Argument *arg) {
     if (arg->name)
@@ -876,7 +869,8 @@ bool CodeGenToz3::preorder(const IR::Declaration_ID *di) {
 bool CodeGenToz3::preorder(const IR::Type_Control *t) {
     auto ctrl_name = t->name.name;
 
-    builder->appendFormat("P4Extern(\"%s\", type_params=", ctrl_name, ctrl_name);
+    builder->appendFormat("P4Extern(\"%s\", type_params=", ctrl_name,
+                          ctrl_name);
     visit(t->applyParams);
     builder->append(")");
 
@@ -886,8 +880,7 @@ bool CodeGenToz3::preorder(const IR::Type_Control *t) {
 bool CodeGenToz3::preorder(const IR::Type_Parser *t) {
     auto parser_name = t->name.name;
 
-    builder->appendFormat("P4Extern(\"%s\", type_params=",
-                          parser_name,
+    builder->appendFormat("P4Extern(\"%s\", type_params=", parser_name,
                           parser_name);
     visit(t->applyParams);
     builder->append(")");
@@ -897,9 +890,7 @@ bool CodeGenToz3::preorder(const IR::Type_Parser *t) {
 bool CodeGenToz3::preorder(const IR::Type_Package *t) {
     auto t_name = t->getName().name;
 
-    builder->appendFormat("P4Package(z3_reg, \"%s\", ",
-                          t_name,
-                          t_name);
+    builder->appendFormat("P4Package(z3_reg, \"%s\", ", t_name, t_name);
     visit(t->getConstructorParameters());
     builder->append(")");
     return false;
@@ -954,7 +945,6 @@ bool CodeGenToz3::preorder(const IR::SerEnumMember *m) {
     return false;
 }
 
-
 bool CodeGenToz3::preorder(const IR::Type_SerEnum *t) {
     builder->appendFormat("SerEnum( \"%s\", [", t->name.name);
     for (auto m : t->members) {
@@ -1008,8 +998,7 @@ bool CodeGenToz3::preorder(const IR::Type_Bits *t) {
     if (t->expression) {
         visit(t->expression);
         builder->append(".get_value()");
-    }
-    else
+    } else
         builder->appendFormat("%d", t->size);
 
     builder->appendFormat(")");
@@ -1031,7 +1020,7 @@ bool CodeGenToz3::preorder(const IR::Type_String *) {
     return false;
 }
 
-bool CodeGenToz3::preorder(const IR::Type_Varbits *t) { \
+bool CodeGenToz3::preorder(const IR::Type_Varbits *t) {
     ::warning("Replacing Varbit  %1% with Bitvector.", t);
     builder->appendFormat("z3.BitVecSort(%d)", t->size);
     return false;
@@ -1066,7 +1055,6 @@ bool CodeGenToz3::preorder(const IR::Type_Var *t) {
     return false;
 }
 
-
 bool CodeGenToz3::preorder(const IR::Type_InfInt *) {
     builder->append("z3.IntSort()");
     return false;
@@ -1077,11 +1065,10 @@ bool CodeGenToz3::preorder(const IR::Type_Dontcare *) {
     return false;
 }
 
-
 bool CodeGenToz3::preorder(const IR::Type_Specialized *t) {
     visit(t->baseType);
     builder->append(".init_type_params(");
-    for (auto arg: *t->arguments) {
+    for (auto arg : *t->arguments) {
         visit(arg);
         builder->append(", ");
     }
@@ -1095,14 +1082,13 @@ bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
     }
     visit(di->type);
     builder->append(".initialize(");
-    for (auto arg: *di->arguments) {
+    for (auto arg : *di->arguments) {
         visit(arg);
         builder->append(", ");
     }
     builder->append(")");
     if (!in_local_scope)
         builder->append(")");
-
 
     return false;
 }
