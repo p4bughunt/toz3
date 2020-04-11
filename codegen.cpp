@@ -1,6 +1,41 @@
 #include "codegen.h"
 
 namespace TOZ3 {
+
+cstring infer_name(const IR::Annotations *annots, cstring default_name) {
+    // This function is a bit of a hacky way to infer the true name of a
+    // declaration. Since there are a couple of passes that rename but add
+    // annotations we can infer the original name from the annotation.
+    // not sure if this generalizes but this is as close we can get for now
+    for (auto anno : annots->annotations) {
+        // there is an original name in the form of an annotation
+        if (anno->name.name == "name") {
+            for (auto token : anno->body) {
+                // the full name can be a bit more convoluted
+                // we only need the last bit after the dot
+                // so hack it out
+                cstring full_name = token->text;
+
+                // find the last dot
+                const char *last_dot = full_name.findlast((int)'.');
+                // there is no dot in this string, just return the full name
+                if (not last_dot) {
+                    return full_name;
+                }
+                // otherwise get the index, remove the dot
+                size_t idx = (size_t)(last_dot - full_name + 1);
+                return token->text.substr(idx);
+            }
+            // if the annotation is a member just get the root name
+            if (auto member = anno->expr.to<IR::Member>()) {
+                return member->member.name;
+            }
+        }
+    }
+
+    return default_name;
+}
+
 Visitor::profile_t CodeGenToz3::init_apply(const IR::Node *node) {
     return Inspector::init_apply(node);
 }
@@ -222,13 +257,13 @@ bool CodeGenToz3::preorder(const IR::Type_Method *t) {
     return false;
 }
 
-bool CodeGenToz3::preorder(const IR::Method *t) {
-    auto method_name = t->name.name;
+bool CodeGenToz3::preorder(const IR::Method *method) {
+    auto method_name = infer_name(method->getAnnotations(), method->name.name);
 
     builder->appendFormat("P4Method(\"%s\", z3_reg, type_params=", method_name);
-    visit(t->type);
+    visit(method->type);
     builder->append(", params=");
-    visit(t->getParameters());
+    visit(method->getParameters());
     builder->append(")");
     return false;
 }
@@ -252,7 +287,7 @@ bool CodeGenToz3::preorder(const IR::Function *function) {
 }
 
 bool CodeGenToz3::preorder(const IR::P4Action *p4action) {
-    auto action_name = p4action->name.name;
+    auto action_name = infer_name(p4action->getAnnotations(), p4action->name.name);;
     builder->appendFormat("P4Action(\"%s\", z3_reg, params=", action_name);
     visit(p4action->getParameters());
     builder->append(", "),
@@ -264,7 +299,7 @@ bool CodeGenToz3::preorder(const IR::P4Action *p4action) {
 }
 
 bool CodeGenToz3::preorder(const IR::P4Table *p4table) {
-    auto tab_name = p4table->name.name;
+    auto tab_name = infer_name(p4table->getAnnotations(), p4table->name.name);
     builder->appendFormat("P4Table(\"%s\", ", tab_name);
     for (auto p : p4table->properties->properties) {
         // IR::Property
@@ -359,7 +394,6 @@ bool CodeGenToz3::preorder(const IR::MethodCallExpression *mce) {
 }
 
 bool CodeGenToz3::preorder(const IR::ListExpression *le) {
-
     builder->append("[");
     for (auto e : le->components) {
         visit(e);
