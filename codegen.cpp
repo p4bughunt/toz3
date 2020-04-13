@@ -134,7 +134,7 @@ bool CodeGenToz3::preorder(const IR::ParserState *ps) {
     if (ps->selectExpression)
         visit(ps->selectExpression);
     else
-        builder->append("P4Exit()");
+        builder->append("RejectState()");
     builder->append(",");
     builder->newline();
     builder->append(depth, "components=[");
