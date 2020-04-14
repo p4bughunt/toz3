@@ -152,7 +152,7 @@ class CodeGenToz3 : public Inspector {
     bool preorder(const IR::ListExpression *le) override;
     bool preorder(const IR::TypeNameExpression *) override;
     bool preorder(const IR::NamedExpression *ne) override;
-    bool preorder(const IR::StructInitializerExpression *sie) override;
+    bool preorder(const IR::StructExpression *sie) override;
     bool preorder(const IR::ConstructorCallExpression *) override;
     bool preorder(const IR::MethodCallExpression *mce) override;
     bool preorder(const IR::Constant *c) override;

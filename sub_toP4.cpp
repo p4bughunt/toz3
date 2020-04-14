@@ -875,7 +875,7 @@ bool SubToP4::preorder(const IR::NamedExpression *e) {
     return false;
 }
 
-bool SubToP4::preorder(const IR::StructInitializerExpression *e) {
+bool SubToP4::preorder(const IR::StructExpression *e) {
     if (e->typeName != nullptr) {
         visit(e->typeName);
         builder.append(" ");

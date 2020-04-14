@@ -707,7 +707,7 @@ bool CodeGenToz3::preorder(const IR::NamedExpression *ne) {
     return false;
 }
 
-bool CodeGenToz3::preorder(const IR::StructInitializerExpression *sie) {
+bool CodeGenToz3::preorder(const IR::StructExpression *sie) {
     IR::IndexedVector<IR::NamedExpression> components;
 
     builder->appendFormat("P4Initializer(");
@@ -855,8 +855,8 @@ bool CodeGenToz3::preorder(const IR::Declaration_Variable *dv) {
         visit(dv->initializer);
         builder->append(", ");
     }
-    builder->append("gen_instance(\"");
-    builder->append(dv->name.name);
+    builder->append("gen_instance(\"undefined");
+    //builder->append(dv->name.name);
     builder->append("\", ");
     visit(dv->type);
     builder->append(")");
