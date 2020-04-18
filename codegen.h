@@ -83,6 +83,7 @@ class CodeGenToz3 : public Inspector {
     // TODO: Get rid of all this global state
 
     bool in_local_scope = false;
+    bool in_function = false;
 
   public:
     int depth;

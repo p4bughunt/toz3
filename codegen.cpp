@@ -280,14 +280,18 @@ bool CodeGenToz3::preorder(const IR::Function *function) {
 
         builder->appendFormat(depth, "body=", function_name);
     in_local_scope = true;
+    in_function = true;
     visit(function->body);
+    in_function = false;
     in_local_scope = false;
     builder->append(depth, ")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::P4Action *p4action) {
-    auto action_name = infer_name(p4action->getAnnotations(), p4action->name.name);;
+    auto action_name =
+        infer_name(p4action->getAnnotations(), p4action->name.name);
+    ;
     builder->appendFormat("P4Action(\"%s\", z3_reg, params=", action_name);
     visit(p4action->getParameters());
     builder->append(", "),
@@ -462,7 +466,11 @@ bool CodeGenToz3::preorder(const IR::MethodCallStatement *mcs) {
 bool CodeGenToz3::preorder(const IR::IfStatement *ifs) {
     builder->append("IfStatement(");
     visit(ifs->condition);
-    builder->append(", ");
+    if (in_function) {
+        builder->append(", True, ");
+    } else {
+        builder->append(", False, ");
+    }
     visit(ifs->ifTrue);
     builder->append(", ");
     visit(ifs->ifFalse);
@@ -856,7 +864,7 @@ bool CodeGenToz3::preorder(const IR::Declaration_Variable *dv) {
         builder->append(", ");
     }
     builder->append("gen_instance(\"undefined");
-    //builder->append(dv->name.name);
+    // builder->append(dv->name.name);
     builder->append("\", ");
     visit(dv->type);
     builder->append(")");
