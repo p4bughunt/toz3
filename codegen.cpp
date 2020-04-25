@@ -414,11 +414,17 @@ bool CodeGenToz3::preorder(const IR::BlockStatement *b) {
     for (auto c : b->components) {
         builder->newline();
         builder->append(depth, "");
-        if (auto dc = c->to<IR::Declaration_Variable>())
+        if (auto dc = c->to<IR::Declaration_Variable>()) {
             builder->appendFormat("P4Declaration(\"%s\", ", dc->name.name);
+        } else if (auto dc = c->to<IR::Declaration_Constant>()) {
+            builder->appendFormat("P4Declaration(\"%s\", ", dc->name.name);
+        }
         visit(c);
-        if (c->is<IR::Declaration_Variable>())
+        if (c->is<IR::Declaration_Variable>()) {
             builder->append(")");
+        } else if (c->is<IR::Declaration_Constant>()) {
+            builder->append(")");
+        }
         builder->append(",");
     }
     builder->append("]");
