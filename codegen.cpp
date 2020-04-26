@@ -1012,24 +1012,16 @@ bool CodeGenToz3::preorder(const IR::Type_Error *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Typedef *t) {
-    if (!in_local_scope)
-        builder->appendFormat("P4Declaration(\"%s\", ", t->name.name);
-    in_local_scope = true;
+    builder->appendFormat("P4Declaration(\"%s\", ", t->name.name);
     visit(t->type);
-    in_local_scope = false;
-    if (!in_local_scope) {
-        builder->append(")");
-    }
+    builder->append(")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Newtype *t) {
-    if (!in_local_scope)
-        builder->appendFormat("P4Declaration(\"%s\", ", t->name.name);
+    builder->appendFormat("P4Declaration(\"%s\", ", t->name.name);
     visit(t->type);
-    if (!in_local_scope) {
-        builder->append(")");
-    }
+    builder->append(")");
     return false;
 }
 
