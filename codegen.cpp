@@ -79,7 +79,7 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     auto parser_name = p->name.name;
 
     in_local_scope = true;
-
+    builder->appendFormat("P4Declaration(\"%s\", ", parser_name);
     builder->append("P4Parser(");
     builder->newline();
     depth++;
@@ -102,9 +102,8 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     depth++;
     for (auto a : p->parserLocals) {
         builder->newline();
-        builder->appendFormat(depth, "P4Declaration(\"%s\", ", a->name.name);
         visit(a);
-        builder->append("), ");
+        builder->append(", ");
     }
     builder->append("],");
     depth--;
@@ -125,6 +124,7 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     depth--;
     builder->append(")");
     in_local_scope = false;
+    builder->append(")");
 
     return false;
 }
@@ -141,11 +141,7 @@ bool CodeGenToz3::preorder(const IR::ParserState *ps) {
     for (auto c : ps->components) {
         builder->newline();
         builder->append(depth, "");
-        if (auto dc = c->to<IR::Declaration>())
-            builder->appendFormat("P4Declaration(\"%s\", ", dc->name.name);
         visit(c);
-        if (c->is<IR::Declaration>())
-            builder->append(")");
         builder->append(",");
     }
     builder->append(depth, "])");
@@ -154,9 +150,11 @@ bool CodeGenToz3::preorder(const IR::ParserState *ps) {
 }
 
 bool CodeGenToz3::preorder(const IR::P4ValueSet *pvs) {
+    builder->appendFormat("P4Declaration(\"%s\", ", pvs->name.name);
     // Since we declare a symbolic value we only need the type and an instance
     builder->appendFormat("gen_instance(\"%s\", ", pvs->name.name);
     visit(pvs->elementType);
+    builder->append(")");
     builder->append(")");
     return false;
 }
@@ -186,7 +184,7 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
     auto ctrl_name = c->name.name;
 
     in_local_scope = true;
-
+    builder->appendFormat("P4Declaration(\"%s\", ", ctrl_name);
     builder->appendFormat("P4Control(");
     builder->newline();
     depth++;
@@ -213,9 +211,8 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
     depth++;
     for (auto a : c->controlLocals) {
         builder->newline();
-        builder->appendFormat(depth, "P4Declaration(\"%s\", ", a->name.name);
         visit(a);
-        builder->append("), ");
+        builder->append(", ");
     }
     depth--;
     builder->append("]");
@@ -224,6 +221,7 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
     builder->append(depth, ")");
 
     in_local_scope = false;
+    builder->append(")");
 
     return false;
 }
@@ -291,7 +289,7 @@ bool CodeGenToz3::preorder(const IR::Function *function) {
 bool CodeGenToz3::preorder(const IR::P4Action *p4action) {
     auto action_name =
         infer_name(p4action->getAnnotations(), p4action->name.name);
-    ;
+    builder->appendFormat("P4Declaration(\"%s\", ", p4action->name.name);
     builder->appendFormat("P4Action(\"%s\", z3_reg, params=", action_name);
     visit(p4action->getParameters());
     builder->append(", "),
@@ -299,17 +297,20 @@ bool CodeGenToz3::preorder(const IR::P4Action *p4action) {
         builder->appendFormat(depth, "body=", action_name);
     visit(p4action->body);
     builder->append(depth, ")");
+    builder->append(")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::P4Table *p4table) {
     auto tab_name = infer_name(p4table->getAnnotations(), p4table->name.name);
+    builder->appendFormat("P4Declaration(\"%s\", ", p4table->name.name);
     builder->appendFormat("P4Table(\"%s\", ", tab_name);
     for (auto p : p4table->properties->properties) {
         // IR::Property
         visit(p);
         builder->append(", ");
     }
+    builder->append(")");
     builder->append(")");
     return false;
 }
@@ -414,17 +415,7 @@ bool CodeGenToz3::preorder(const IR::BlockStatement *b) {
     for (auto c : b->components) {
         builder->newline();
         builder->append(depth, "");
-        if (auto dc = c->to<IR::Declaration_Variable>()) {
-            builder->appendFormat("P4Declaration(\"%s\", ", dc->name.name);
-        } else if (auto dc = c->to<IR::Declaration_Constant>()) {
-            builder->appendFormat("P4Declaration(\"%s\", ", dc->name.name);
-        }
         visit(c);
-        if (c->is<IR::Declaration_Variable>()) {
-            builder->append(")");
-        } else if (c->is<IR::Declaration_Constant>()) {
-            builder->append(")");
-        }
         builder->append(",");
     }
     builder->append("]");
@@ -847,8 +838,7 @@ bool CodeGenToz3::preorder(const IR::Argument *arg) {
 }
 
 bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
-    if (!in_local_scope)
-        builder->appendFormat("P4Declaration(\"%s\", ", dc->name.name);
+    builder->appendFormat("P4Declaration(\"%s\", ", dc->name.name);
     if (dc->initializer)
         visit(dc->initializer);
     else {
@@ -858,12 +848,14 @@ bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
         visit(dc->type);
         builder->append(")");
     }
-    if (!in_local_scope)
-        builder->append(")");
+    builder->appendFormat(", z3_type=");
+    visit(dc->type);
+    builder->append(")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Declaration_Variable *dv) {
+    builder->appendFormat("P4Declaration(\"%s\", ", dv->name.name);
     if (dv->initializer) {
         builder->append("P4Initializer(");
         visit(dv->initializer);
@@ -878,6 +870,7 @@ bool CodeGenToz3::preorder(const IR::Declaration_Variable *dv) {
     if (dv->initializer) {
         builder->append(")");
     }
+    builder->append(")");
     return false;
 }
 
@@ -1044,10 +1037,17 @@ bool CodeGenToz3::preorder(const IR::Type_Bits *t) {
     builder->appendFormat("z3.BitVecSort(");
 
     if (t->expression) {
-        visit(t->expression);
-        builder->append(".get_value()");
-    } else
+        if (t->expression->is<IR::PathExpression>()) {
+            builder->append("z3_reg._globals[");
+            visit(t->expression);
+            builder->append("]");
+        } else {
+            visit(t->expression);
+            builder->append(".get_value()");
+        }
+    } else {
         builder->appendFormat("%d", t->size);
+    }
 
     builder->appendFormat(")");
     return false;
@@ -1125,9 +1125,7 @@ bool CodeGenToz3::preorder(const IR::Type_Specialized *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
-    if (!in_local_scope) {
-        builder->appendFormat("P4Declaration(\"%s\", ", di->name.name);
-    }
+    builder->appendFormat("P4Declaration(\"%s\", ", di->name.name);
     visit(di->type);
     builder->append(".initialize(");
     for (auto arg : *di->arguments) {
@@ -1135,8 +1133,7 @@ bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
         builder->append(", ");
     }
     builder->append(")");
-    if (!in_local_scope)
-        builder->append(")");
+    builder->append(")");
 
     return false;
 }
