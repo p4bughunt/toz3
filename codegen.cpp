@@ -257,18 +257,19 @@ bool CodeGenToz3::preorder(const IR::Type_Method *t) {
 
 bool CodeGenToz3::preorder(const IR::Method *method) {
     auto method_name = infer_name(method->getAnnotations(), method->name.name);
-
+    builder->appendFormat("P4Declaration(\"%s\", ", method->name.name);
     builder->appendFormat("P4Method(\"%s\", z3_reg, type_params=", method_name);
     visit(method->type);
     builder->append(", params=");
     visit(method->getParameters());
+    builder->append(")");
     builder->append(")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Function *function) {
     auto function_name = function->name.name;
-
+    builder->appendFormat("P4Declaration(\"%s\", ", function_name);
     builder->appendFormat("P4Function(\"%s\", z3_reg, return_type=",
                           function_name);
     visit(function->type->returnType);
@@ -282,6 +283,7 @@ bool CodeGenToz3::preorder(const IR::Function *function) {
     visit(function->body);
     in_function = false;
     in_local_scope = false;
+    builder->append(depth, ")");
     builder->append(depth, ")");
     return false;
 }
@@ -910,7 +912,7 @@ bool CodeGenToz3::preorder(const IR::Declaration_ID *di) {
 bool CodeGenToz3::preorder(const IR::Type_Control *t) {
     auto ctrl_name = t->name.name;
 
-    builder->appendFormat("P4Extern(\"%s\", type_params=", ctrl_name,
+    builder->appendFormat("P4ControlType(\"%s\", type_params=", ctrl_name,
                           ctrl_name);
     visit(t->applyParams);
     builder->append(")");
@@ -921,7 +923,7 @@ bool CodeGenToz3::preorder(const IR::Type_Control *t) {
 bool CodeGenToz3::preorder(const IR::Type_Parser *t) {
     auto parser_name = t->name.name;
 
-    builder->appendFormat("P4Extern(\"%s\", type_params=", parser_name,
+    builder->appendFormat("P4ParserType(\"%s\", type_params=", parser_name,
                           parser_name);
     visit(t->applyParams);
     builder->append(")");
@@ -930,9 +932,10 @@ bool CodeGenToz3::preorder(const IR::Type_Parser *t) {
 
 bool CodeGenToz3::preorder(const IR::Type_Package *t) {
     auto t_name = t->getName().name;
-
+    builder->appendFormat("P4Declaration(\"%s\", ", t_name);
     builder->appendFormat("P4Package(z3_reg, \"%s\", ", t_name, t_name);
     visit(t->getConstructorParameters());
+    builder->append(")");
     builder->append(")");
     return false;
 }
