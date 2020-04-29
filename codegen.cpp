@@ -726,10 +726,7 @@ bool CodeGenToz3::preorder(const IR::StructExpression *sie) {
     }
     builder->append("], ");
     if (sie->typeName) {
-        auto sie_name = sie->typeName->path->name.name;
-        builder->appendFormat("gen_instance(\"%s\", ", sie_name);
         visit(sie->typeName);
-        builder->append(")");
     }
     builder->append(")");
 
@@ -841,14 +838,10 @@ bool CodeGenToz3::preorder(const IR::Argument *arg) {
 
 bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
     builder->appendFormat("P4Declaration(\"%s\", ", dc->name.name);
-    if (dc->initializer)
+    if (dc->initializer) {
         visit(dc->initializer);
-    else {
-        builder->append("gen_instance(\"");
-        builder->append(dc->name.name);
-        builder->append("\", ");
-        visit(dc->type);
-        builder->append(")");
+    } else {
+        builder->append("None");
     }
     builder->appendFormat(", z3_type=");
     visit(dc->type);
@@ -862,16 +855,13 @@ bool CodeGenToz3::preorder(const IR::Declaration_Variable *dv) {
         builder->append("P4Initializer(");
         visit(dv->initializer);
         builder->append(", ");
-    }
-    builder->append("gen_instance(\"undefined");
-    // builder->append(dv->name.name);
-    builder->append("\", ");
-    visit(dv->type);
-    builder->append(")");
-
-    if (dv->initializer) {
+        visit(dv->type);
         builder->append(")");
+    } else {
+        builder->append("None");
     }
+    builder->appendFormat(", z3_type=");
+    visit(dv->type);
     builder->append(")");
     return false;
 }
