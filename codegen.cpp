@@ -277,8 +277,7 @@ bool CodeGenToz3::preorder(const IR::Function *function) {
     builder->append(", params=");
     visit(function->getParameters());
     builder->append(", "),
-
-        builder->appendFormat(depth, "body=", function_name);
+    builder->appendFormat(depth, "body=", function_name);
     in_local_scope = true;
     in_function = true;
     visit(function->body);
@@ -440,9 +439,18 @@ bool CodeGenToz3::preorder(const IR::ExitStatement *) {
 }
 
 bool CodeGenToz3::preorder(const IR::ReturnStatement *r) {
-    // TODO: Make this a proper return statement
     builder->append("P4Return(");
-    visit(r->expression);
+    if (r->expression) {
+        visit(r->expression);
+    } else {
+        builder->append("None");
+    }
+    if (in_function) {
+        builder->append(", ");
+        auto fun = findContext<const IR::Function>();
+        visit(fun->type->returnType);
+    }
+
     builder->append(")");
     return false;
 }
