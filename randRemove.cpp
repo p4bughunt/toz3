@@ -1,5 +1,3 @@
-
-
 #include "randRemove.h"
 
 namespace TOZ3 {

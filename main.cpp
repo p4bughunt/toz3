@@ -13,6 +13,7 @@
 #include "frontends/p4/validateParsedProgram.h"
 
 #include "frontends/p4/fromv1.0/v1model.h"
+#include "frontends/p4/toP4/toP4.h"
 
 #include "ir/ir.h"
 #include "lib/error.h"
@@ -122,7 +123,7 @@ int main(int argc, char *const argv[]) {
             // if the emit flag is enabled, also emit the new p4 version
             if (options.emit_p4) {
                 auto p4_ostream = openFile(options.o_file + ".p4", false);
-                TOZ3::SubToP4 *top4 = new TOZ3::SubToP4(p4_ostream, false);
+                P4::ToP4 *top4 = new P4::ToP4(p4_ostream, false);
                 program->apply(*top4);
             }
         } catch (const Util::P4CExceptionBase &bug) {

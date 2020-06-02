@@ -3,8 +3,6 @@
 
 #include "ir/ir.h"
 
-#include "sub_toP4.h"
-
 namespace TOZ3 {
 
 class DoRandRemove : public Transform {
