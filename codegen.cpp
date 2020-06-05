@@ -789,8 +789,10 @@ bool CodeGenToz3::preorder(const IR::Parameter *p) {
         builder->append("\"inout\", ");
     else if (p->direction == IR::Direction::Out)
         builder->append("\"out\", ");
-    else
+    else if (p->direction == IR::Direction::In)
         builder->append("\"in\", ");
+    else
+        builder->append("\"none\", ");
 
     builder->append("\"");
     builder->append(p->name);
