@@ -68,8 +68,9 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
         builder->append(depth, ")");
         builder->newline();
     }
-    builder->appendFormat(depth, "return z3_reg._globals[\"main\"] if \"main\" "
-                                 "in z3_reg._globals else None");
+    builder->append(depth, "return z3_reg._globals[\"main\"] if \"main\" "
+                           "in z3_reg._globals and "
+                           "isinstance(z3_reg._globals[\"main\"], P4Package) else None");
     builder->newline();
     depth = 0;
     return false;
@@ -276,8 +277,7 @@ bool CodeGenToz3::preorder(const IR::Function *function) {
     visit(function->type->returnType);
     builder->append(", params=");
     visit(function->getParameters());
-    builder->append(", "),
-    builder->appendFormat(depth, "body=", function_name);
+    builder->append(", "), builder->appendFormat(depth, "body=", function_name);
     in_local_scope = true;
     in_function = true;
     visit(function->body);
