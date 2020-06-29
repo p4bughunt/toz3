@@ -68,9 +68,11 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
         builder->append(depth, ")");
         builder->newline();
     }
-    builder->append(depth, "return z3_reg._globals[\"main\"] if \"main\" "
-                           "in z3_reg._globals and "
-                           "isinstance(z3_reg._globals[\"main\"], P4Package) else None");
+    builder->append(
+        depth,
+        "return z3_reg.p4_state.globals[\"main\"] if \"main\" "
+        "in z3_reg.p4_state.globals and "
+        "isinstance(z3_reg.p4_state.globals[\"main\"], P4Package) else None");
     builder->newline();
     depth = 0;
     return false;
@@ -850,7 +852,7 @@ bool CodeGenToz3::preorder(const IR::Argument *arg) {
 }
 
 bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
-    builder->appendFormat("P4Declaration(\"%s\", ", dc->name.name);
+    builder->appendFormat("ValueDeclaration(\"%s\", ", dc->name.name);
     if (dc->initializer) {
         visit(dc->initializer);
     } else {
@@ -863,7 +865,7 @@ bool CodeGenToz3::preorder(const IR::Declaration_Constant *dc) {
 }
 
 bool CodeGenToz3::preorder(const IR::Declaration_Variable *dv) {
-    builder->appendFormat("P4Declaration(\"%s\", ", dv->name.name);
+    builder->appendFormat("ValueDeclaration(\"%s\", ", dv->name.name);
     if (dv->initializer) {
         builder->append("P4Initializer(");
         visit(dv->initializer);
@@ -1035,14 +1037,9 @@ bool CodeGenToz3::preorder(const IR::Type_Bits *t) {
     builder->appendFormat("z3.BitVecSort(");
 
     if (t->expression) {
-        if (t->expression->is<IR::PathExpression>()) {
-            builder->append("z3_reg._globals[");
-            visit(t->expression);
-            builder->append("]");
-        } else {
-            visit(t->expression);
-            builder->append(".get_value()");
-        }
+        builder->append("z3_reg.get_value(");
+        visit(t->expression);
+        builder->append(")");
     } else {
         builder->appendFormat("%d", t->size);
     }
