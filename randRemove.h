@@ -6,9 +6,8 @@
 namespace TOZ3 {
 
 class DoRandRemove : public Transform {
-
   public:
-    explicit DoRandRemove() { setName("DoRandRemove"); }
+    DoRandRemove() { setName("DoRandRemove"); }
 
     ~DoRandRemove() {}
 

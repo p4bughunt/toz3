@@ -9,7 +9,6 @@
 namespace P4TOZ3 {
 
 class toz3Options : public CompilerOptions {
-
   public:
     toz3Options();
     // output file

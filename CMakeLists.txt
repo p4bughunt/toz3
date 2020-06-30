@@ -13,7 +13,6 @@ set (TOZ3_SRCS
     randRemove.h
     main.cpp
     )
-add_cpplint_files (${CMAKE_CURRENT_SOURCE_DIR} "${TOZ3_SRCS}")
 
 #build_unified(TOZ3_SRCS)
 add_executable(p4toz3 ${TOZ3_SRCS})

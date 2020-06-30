@@ -895,7 +895,6 @@ bool CodeGenToz3::preorder(const IR::SwitchStatement *ss) {
 }
 
 bool CodeGenToz3::preorder(const IR::SwitchCase *sc) {
-
     builder->append("(");
     visit(sc->label);
     builder->append(", ");
