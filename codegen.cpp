@@ -81,7 +81,6 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
 bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     auto parser_name = p->name.name;
 
-    in_local_scope = true;
     builder->appendFormat("P4Declaration(\"%s\", ", parser_name);
     builder->append("P4Parser(");
     builder->newline();
@@ -126,7 +125,6 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     builder->newline();
     depth--;
     builder->append(")");
-    in_local_scope = false;
     builder->append(")");
 
     return false;
@@ -187,7 +185,6 @@ bool CodeGenToz3::preorder(const IR::SelectCase *sc) {
 bool CodeGenToz3::preorder(const IR::P4Control *c) {
     auto ctrl_name = c->name.name;
 
-    in_local_scope = true;
     builder->appendFormat("P4Declaration(\"%s\", ", ctrl_name);
     builder->appendFormat("P4Control(");
     builder->newline();
@@ -224,7 +221,6 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
     depth--;
     builder->append(depth, ")");
 
-    in_local_scope = false;
     builder->append(")");
 
     return false;
@@ -238,9 +234,7 @@ bool CodeGenToz3::preorder(const IR::Type_Extern *t) {
     builder->append(", methods=[");
 
     for (auto m : t->methods) {
-        in_local_scope = true;
         visit(m);
-        in_local_scope = false;
         builder->append(", ");
     }
     builder->append("])");
@@ -280,11 +274,7 @@ bool CodeGenToz3::preorder(const IR::Function *function) {
     builder->append(", params=");
     visit(function->getParameters());
     builder->append(", "), builder->appendFormat(depth, "body=", function_name);
-    in_local_scope = true;
-    in_function = true;
     visit(function->body);
-    in_function = false;
-    in_local_scope = false;
     builder->append(depth, ")");
     builder->append(depth, ")");
     return false;
@@ -447,11 +437,6 @@ bool CodeGenToz3::preorder(const IR::ReturnStatement *r) {
     } else {
         builder->append("None");
     }
-    if (in_function) {
-        builder->append(", ");
-        auto fun = findContext<const IR::Function>();
-        visit(fun->type->returnType);
-    }
 
     builder->append(")");
     return false;
@@ -476,11 +461,7 @@ bool CodeGenToz3::preorder(const IR::MethodCallStatement *mcs) {
 bool CodeGenToz3::preorder(const IR::IfStatement *ifs) {
     builder->append("IfStatement(");
     visit(ifs->condition);
-    if (in_function) {
-        builder->append(", True, ");
-    } else {
-        builder->append(", False, ");
-    }
+    builder->append(", ");
     visit(ifs->ifTrue);
     builder->append(", ");
     visit(ifs->ifFalse);
