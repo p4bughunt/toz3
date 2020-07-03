@@ -85,8 +85,6 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     builder->append("P4Parser(");
     builder->newline();
     depth++;
-    builder->append(depth, "z3_reg=z3_reg,");
-    builder->newline();
     builder->appendFormat(depth, "name=\"%s\",", parser_name);
     builder->newline();
     builder->append(depth, "params=");
@@ -189,8 +187,6 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
     builder->appendFormat("P4Control(");
     builder->newline();
     depth++;
-    builder->append(depth, "z3_reg=z3_reg,");
-    builder->newline();
     builder->appendFormat(depth, "name=\"%s\",", ctrl_name);
     builder->newline();
     builder->append(depth, "params=");
@@ -256,7 +252,7 @@ bool CodeGenToz3::preorder(const IR::Type_Method *t) {
 bool CodeGenToz3::preorder(const IR::Method *method) {
     auto method_name = infer_name(method->getAnnotations(), method->name.name);
     builder->appendFormat("P4Declaration(\"%s\", ", method->name.name);
-    builder->appendFormat("P4Method(\"%s\", z3_reg, type_params=", method_name);
+    builder->appendFormat("P4Method(\"%s\", type_params=", method_name);
     visit(method->type);
     builder->append(", params=");
     visit(method->getParameters());
@@ -268,7 +264,7 @@ bool CodeGenToz3::preorder(const IR::Method *method) {
 bool CodeGenToz3::preorder(const IR::Function *function) {
     auto function_name = function->name.name;
     builder->appendFormat("P4Declaration(\"%s\", ", function_name);
-    builder->appendFormat("P4Function(\"%s\", z3_reg, return_type=",
+    builder->appendFormat("P4Function(\"%s\", return_type=",
                           function_name);
     visit(function->type->returnType);
     builder->append(", params=");
@@ -284,7 +280,7 @@ bool CodeGenToz3::preorder(const IR::P4Action *p4action) {
     auto action_name =
         infer_name(p4action->getAnnotations(), p4action->name.name);
     builder->appendFormat("P4Declaration(\"%s\", ", p4action->name.name);
-    builder->appendFormat("P4Action(\"%s\", z3_reg, params=", action_name);
+    builder->appendFormat("P4Action(\"%s\", params=", action_name);
     visit(p4action->getParameters());
     builder->append(", "),
 
