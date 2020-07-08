@@ -742,7 +742,7 @@ bool CodeGenToz3::preorder(const IR::Constant *c) {
             builder->appendFormat("z3.BitVecVal(%s, %d)", c->toString(),
                                   tb->size);
     else if (c->type->is<IR::Type_InfInt>()) {
-        builder->appendFormat("Z3Int(%s)", c->toString());
+        builder->appendFormat("%s", c->toString());
     } else
         FATAL_ERROR("Constant Node %s not implemented!",
                     c->type->node_type_name());
