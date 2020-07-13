@@ -87,6 +87,10 @@ bool CodeGenToz3::preorder(const IR::P4Parser *p) {
     depth++;
     builder->appendFormat(depth, "name=\"%s\",", parser_name);
     builder->newline();
+    builder->append(depth, "type_params=");
+    visit(p->getTypeParameters());
+    builder->append(",");
+    builder->newline();
     builder->append(depth, "params=");
 
     visit(p->getApplyParameters());
@@ -189,8 +193,11 @@ bool CodeGenToz3::preorder(const IR::P4Control *c) {
     depth++;
     builder->appendFormat(depth, "name=\"%s\",", ctrl_name);
     builder->newline();
+    builder->append(depth, "type_params=");
+    visit(c->getTypeParameters());
+    builder->append(",");
+    builder->newline();
     builder->append(depth, "params=");
-
     visit(c->getApplyParameters());
     builder->append(",");
     builder->newline();
