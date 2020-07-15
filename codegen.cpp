@@ -70,9 +70,9 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
     }
     builder->append(
         depth,
-        "return z3_reg.p4_state.globals[\"main\"] if \"main\" "
-        "in z3_reg.p4_state.globals and "
-        "isinstance(z3_reg.p4_state.globals[\"main\"], P4Package) else None");
+        "return z3_reg.p4_state.main_context.locals[\"main\"] if \"main\" "
+        "in z3_reg.p4_state.main_context.locals and "
+        "isinstance(z3_reg.p4_state.main_context.locals[\"main\"], P4Package) else None");
     builder->newline();
     depth = 0;
     return false;
