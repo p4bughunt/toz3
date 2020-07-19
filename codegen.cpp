@@ -68,11 +68,10 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
         builder->append(depth, ")");
         builder->newline();
     }
-    builder->append(
-        depth,
-        "return z3_reg.p4_state.main_context.locals[\"main\"] if \"main\" "
-        "in z3_reg.p4_state.main_context.locals and "
-        "isinstance(z3_reg.p4_state.main_context.locals[\"main\"], P4Package) else None");
+    builder->append(depth, "var = z3_reg.get_main_function()");
+    builder->newline();
+    builder->append(depth,
+                    "return var if isinstance(var, P4Package) else None");
     builder->newline();
     depth = 0;
     return false;
@@ -271,8 +270,7 @@ bool CodeGenToz3::preorder(const IR::Method *method) {
 bool CodeGenToz3::preorder(const IR::Function *function) {
     auto function_name = function->name.name;
     builder->appendFormat("P4Declaration(\"%s\", ", function_name);
-    builder->appendFormat("P4Function(\"%s\", return_type=",
-                          function_name);
+    builder->appendFormat("P4Function(\"%s\", return_type=", function_name);
     visit(function->type->returnType);
     builder->append(", params=");
     visit(function->getParameters());
@@ -647,8 +645,14 @@ bool CodeGenToz3::preorder(const IR::Mask *expr) {
     return false;
 }
 
+bool CodeGenToz3::preorder(const IR::Range *expr) {
+    builder->append("P4Range");
+    visit_binary(expr);
+    return false;
+}
+
 bool CodeGenToz3::preorder(const IR::ArrayIndex *expr) {
-    builder->append("P4Member");
+    builder->append("P4Index");
     visit_binary(expr);
     return false;
 }
@@ -684,7 +688,12 @@ bool CodeGenToz3::preorder(const IR::Member *m) {
 }
 
 bool CodeGenToz3::preorder(const IR::PathExpression *p) {
-    builder->appendFormat("\"%s\"", p->path->asString());
+    cstring path = p->path->asString();
+    // FIXME: Stupid hack to fix vars that start with a dot...
+    if (path.startsWith(".")) {
+        path = path.substr(1);
+    }
+    builder->appendFormat("\"%s\"", path);
     return false;
 }
 
@@ -761,6 +770,11 @@ bool CodeGenToz3::preorder(const IR::BoolLiteral *bl) {
         builder->append("z3.BoolVal(True)");
     else
         builder->append("z3.BoolVal(False)");
+    return false;
+}
+
+bool CodeGenToz3::preorder(const IR::StringLiteral *str) {
+    builder->appendFormat("z3.StringVal(\"%s\")", str->value);
     return false;
 }
 
@@ -1042,7 +1056,7 @@ bool CodeGenToz3::preorder(const IR::Type_Void *) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_String *) {
-    builder->appendFormat("z3.DeclareSort(\"string\")");
+    builder->appendFormat("z3.StringSort()");
     return false;
 }
 
@@ -1092,8 +1106,9 @@ bool CodeGenToz3::preorder(const IR::Type_Dontcare *) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Specialized *t) {
+    builder->append("specialize_type(z3_reg, ");
     visit(t->baseType);
-    builder->append(".init_type_params(");
+    builder->append(", ");
     for (auto arg : *t->arguments) {
         visit(arg);
         builder->append(", ");
@@ -1103,16 +1118,17 @@ bool CodeGenToz3::preorder(const IR::Type_Specialized *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
-    builder->appendFormat("P4Declaration(\"%s\", ", di->name.name);
+    builder->appendFormat("InstanceDeclaration(z3_reg, \"%s\", ",
+                          di->name.name);
     visit(di->type);
-    builder->append(".initialize(");
+    builder->append(", ");
     for (auto arg : *di->arguments) {
         visit(arg);
         builder->append(", ");
     }
     builder->append(")");
-    builder->append(")");
 
     return false;
 }
+
 } // namespace TOZ3

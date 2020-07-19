@@ -153,6 +153,7 @@ class CodeGenToz3 : public Inspector {
     bool preorder(const IR::MethodCallExpression *mce) override;
     bool preorder(const IR::Constant *c) override;
     bool preorder(const IR::BoolLiteral *bl) override;
+    bool preorder(const IR::StringLiteral *str) override;
 
     void visit_unary(const IR::Operation_Unary *);
     void visit_binary(const IR::Operation_Binary *);
@@ -181,6 +182,7 @@ class CodeGenToz3 : public Inspector {
     bool preorder(const IR::LAnd *expr) override;
     bool preorder(const IR::LOr *expr) override;
     bool preorder(const IR::Mask *) override;
+    bool preorder(const IR::Range *) override;
     bool preorder(const IR::Cast *c) override;
     bool preorder(const IR::Concat *c) override;
     bool preorder(const IR::Slice *s) override;
