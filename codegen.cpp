@@ -745,23 +745,19 @@ bool CodeGenToz3::preorder(const IR::DefaultExpression *) {
 }
 
 bool CodeGenToz3::preorder(const IR::Constant *c) {
-    // so we just need to call visit()
-    // Unfortunately, z3 python does not handle Var declarations nicely
-    // So for now we need to do hardcoded checks.
-    // builder->appendFormat("z3.Var(%d, ", c->value.get_ui());
-    // visit(c->type);
-    // builder->append(")");
-    if (auto tb = c->type->to<IR::Type_Bits>())
-        if (tb->isSigned)
+    if (auto tb = c->type->to<IR::Type_Bits>()) {
+        if (tb->isSigned) {
             builder->appendFormat("Z3Int(%s, %d)", c->toString(), tb->size);
-        else
+        } else {
             builder->appendFormat("z3.BitVecVal(%s, %d)", c->toString(),
                                   tb->size);
-    else if (c->type->is<IR::Type_InfInt>()) {
+        }
+    } else if (c->type->is<IR::Type_InfInt>()) {
         builder->appendFormat("%s", c->toString());
-    } else
+    } else {
         FATAL_ERROR("Constant Node %s not implemented!",
                     c->type->node_type_name());
+    }
     return false;
 }
 
@@ -914,9 +910,10 @@ bool CodeGenToz3::preorder(const IR::Declaration_ID *di) {
 bool CodeGenToz3::preorder(const IR::Type_Control *t) {
     auto ctrl_name = t->name.name;
 
-    builder->appendFormat("P4ControlType(\"%s\", type_params=", ctrl_name,
-                          ctrl_name);
-    visit(t->applyParams);
+    builder->appendFormat("P4ControlType(\"%s\", type_params=", ctrl_name);
+    visit(t->getApplyParameters());
+    builder->append(", method_type=");
+    visit(t->getApplyMethodType());
     builder->append(")");
 
     return false;
@@ -925,9 +922,10 @@ bool CodeGenToz3::preorder(const IR::Type_Control *t) {
 bool CodeGenToz3::preorder(const IR::Type_Parser *t) {
     auto parser_name = t->name.name;
 
-    builder->appendFormat("P4ParserType(\"%s\", type_params=", parser_name,
-                          parser_name);
-    visit(t->applyParams);
+    builder->appendFormat("P4ParserType(\"%s\", type_params=", parser_name);
+    visit(t->getApplyParameters());
+    builder->append(", method_type=");
+    visit(t->getApplyMethodType());
     builder->append(")");
     return false;
 }
@@ -1075,7 +1073,7 @@ bool CodeGenToz3::preorder(const IR::Type_Stack *type) {
 
 bool CodeGenToz3::preorder(const IR::Type_Tuple *t) {
     // This is a dummy type, not sure how to name it
-    // TODO: Figure out a better way to instantiate
+    // TODO(Fabian): Figure out a better way to instantiate
     builder->append("ListType(\"tuple\", [");
     for (auto c : t->components) {
         visit(c);
@@ -1091,7 +1089,7 @@ bool CodeGenToz3::preorder(const IR::Type_Name *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Var *t) {
-    builder->appendFormat("z3_reg.type(\"%s\")", t->getVarName());
+    builder->appendFormat("z3_reg.type_var(\"%s\")", t->getVarName());
     return false;
 }
 
