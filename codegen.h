@@ -224,10 +224,7 @@ class CodeGenToz3 : public Inspector {
     bool preorder(const IR::Declaration_ID *di) override;
     bool preorder(const IR::Declaration_Variable *dv) override;
     bool preorder(const IR::Declaration_Constant *dv) override;
-
-    /********************************************************************/
-    /* Skip these types for now*/
-    bool preorder(const IR::Declaration_MatchKind *) override { return false; }
+    bool preorder(const IR::Declaration_MatchKind *) override;
 };
 } // namespace TOZ3
 
