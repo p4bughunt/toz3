@@ -343,7 +343,6 @@ bool CodeGenToz3::preorder(const IR::Entry *e) {
 }
 
 bool CodeGenToz3::preorder(const IR::EntriesList *el) {
-    // Tao: a trick here
     builder->append("[");
     for (auto entry : el->entries) {
         visit(entry);
@@ -356,7 +355,7 @@ bool CodeGenToz3::preorder(const IR::EntriesList *el) {
 bool CodeGenToz3::preorder(const IR::Key *key) {
     builder->append("[");
     for (auto ke : key->keyElements) {
-        visit(ke->expression);
+        visit(ke);
         builder->append(", ");
     }
     builder->append("]");
@@ -364,7 +363,11 @@ bool CodeGenToz3::preorder(const IR::Key *key) {
 }
 
 bool CodeGenToz3::preorder(const IR::KeyElement *ke) {
+    builder->append("(");
     visit(ke->expression);
+    builder->append(", ");
+    visit(ke->matchType);
+    builder->append(")");
     return false;
 }
 
