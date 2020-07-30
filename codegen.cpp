@@ -870,7 +870,6 @@ bool CodeGenToz3::preorder(const IR::Declaration_MatchKind *dm) {
     return false;
 }
 
-
 bool CodeGenToz3::preorder(const IR::Declaration_Variable *dv) {
     builder->appendFormat("ValueDeclaration(\"%s\", ", dv->name.name);
     if (dv->initializer) {
@@ -923,10 +922,12 @@ bool CodeGenToz3::preorder(const IR::Declaration_ID *di) {
 bool CodeGenToz3::preorder(const IR::Type_Control *t) {
     auto ctrl_name = t->name.name;
 
-    builder->appendFormat("P4ControlType(\"%s\", params=", ctrl_name);
+    builder->appendFormat("ControlDeclaration(P4ControlType(\"%s\", params=",
+                          ctrl_name);
     visit(t->getApplyParameters());
     builder->append(", type_params=");
     visit(t->getTypeParameters());
+    builder->append(")");
     builder->append(")");
 
     return false;
@@ -935,10 +936,12 @@ bool CodeGenToz3::preorder(const IR::Type_Control *t) {
 bool CodeGenToz3::preorder(const IR::Type_Parser *t) {
     auto parser_name = t->name.name;
 
-    builder->appendFormat("P4ParserType(\"%s\", params=", parser_name);
+    builder->appendFormat("ControlDeclaration(P4ParserType(\"%s\", params=",
+                          parser_name);
     visit(t->getApplyParameters());
     builder->append(", type_params=");
     visit(t->getTypeParameters());
+    builder->append(")");
     builder->append(")");
     return false;
 }
@@ -1131,8 +1134,7 @@ bool CodeGenToz3::preorder(const IR::Type_Specialized *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Declaration_Instance *di) {
-    builder->appendFormat("InstanceDeclaration(\"%s\", ",
-                          di->name.name);
+    builder->appendFormat("InstanceDeclaration(\"%s\", ", di->name.name);
     visit(di->type);
     builder->append(", ");
     for (auto arg : *di->arguments) {
