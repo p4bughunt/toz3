@@ -772,7 +772,8 @@ bool CodeGenToz3::preorder(const IR::BoolLiteral *bl) {
 }
 
 bool CodeGenToz3::preorder(const IR::StringLiteral *str) {
-    builder->appendFormat("z3.StringVal(\"%s\")", str->value);
+    auto var_string = str->value.replace("\n", "\\n");
+    builder->appendFormat("z3.StringVal(\"%s\")", var_string);
     return false;
 }
 
