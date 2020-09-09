@@ -1078,7 +1078,8 @@ bool CodeGenToz3::preorder(const IR::Type_String *) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Varbits *t) {
-    ::warning("Replacing Varbit  %1% with Bitvector.", t);
+    ::warning(ErrorType::WARN_UNSUPPORTED,
+              "Replacing varbit %1% with bitvector.", t);
     builder->appendFormat("z3.BitVecSort(%d)", t->size);
     return false;
 }
