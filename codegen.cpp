@@ -299,13 +299,27 @@ bool CodeGenToz3::preorder(const IR::P4Table *p4table) {
     auto tab_name = infer_name(p4table->getAnnotations(), p4table->name.name);
     builder->appendFormat("P4Declaration(\"%s\", ", p4table->name.name);
     builder->appendFormat("P4Table(\"%s\", ", tab_name);
+    bool immutable = false;
     for (auto p : p4table->properties->properties) {
         // IR::Property
         visit(p);
+        if (p->name.name == "entries" and p->isConstant) {
+            immutable = true;
+        }
         builder->append(", ");
     }
-    builder->append(")");
-    builder->append(")");
+
+    for (const auto *anno : p4table->getAnnotations()->annotations) {
+        if (anno->name.name == "hidden") {
+            immutable = true;
+        }
+    }
+    if (immutable) {
+        builder->append("immutable=True");
+    } else {
+        builder->append("immutable=False");
+    }
+    builder->append("))");
     return false;
 }
 

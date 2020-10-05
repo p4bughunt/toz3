@@ -82,29 +82,7 @@ int main(int argc, char *const argv[]) {
     const IR::P4Program *program = nullptr;
 
     program = P4::parseP4File(options);
-/*
-    P4::ReferenceMap refMap;
-    P4::TypeMap typeMap;
-    PassManager passes = {
-        // Synthesize some built-in constructs
-        new P4::CreateBuiltins(),
-        new P4::ResolveReferences(&refMap, true),  // check shadowing
-        // First pass of constant folding, before types are known --
-        // may be needed to compute types.
-        new P4::ConstantFolding(&refMap, nullptr),
-        // Desugars direct parser and control applications
-        // into instantiations followed by application
-        new P4::InstantiateDirectCalls(&refMap),
-        // Type checking and type inference.  Also inserts
-        // explicit casts where implicit casts exist.
-        new P4::ResolveReferences(&refMap),  // check shadowing
-        new P4::TypeInference(&refMap, &typeMap, false),  // insert casts#
-        new P4::BindTypeVariables(&refMap, &typeMap),
-        new P4::SpecializeAll(&refMap, &typeMap),
-        };
 
-    program = program->apply(passes);
-*/
     if (program != nullptr && ::errorCount() == 0) {
         try {
             P4::P4COptionPragmaParser optionsPragmaParser;
