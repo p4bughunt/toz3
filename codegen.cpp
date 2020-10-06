@@ -303,16 +303,21 @@ bool CodeGenToz3::preorder(const IR::P4Table *p4table) {
     for (auto p : p4table->properties->properties) {
         // IR::Property
         visit(p);
+        // if the entries properties is constant it means the entries are fixed
+        // we cannot add or remove table entries
         if (p->name.name == "entries" and p->isConstant) {
             immutable = true;
         }
         builder->append(", ");
     }
-
-    for (const auto *anno : p4table->getAnnotations()->annotations) {
-        if (anno->name.name == "hidden") {
-            immutable = true;
-        }
+    // also check if the table is invisible to the control plane
+    // this also implies that it cannot be modified
+    auto annos = p4table->getAnnotations()->annotations;
+    if (std::any_of(annos.begin(), annos.end(),
+                    [](const IR::Annotation *anno) {
+                        return anno->name.name == "hidden";
+                    })) {
+        immutable = true;
     }
     if (immutable) {
         builder->append("immutable=True");
