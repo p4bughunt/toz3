@@ -165,12 +165,12 @@ bool CodeGenToz3::preorder(const IR::P4ValueSet *pvs) {
 bool CodeGenToz3::preorder(const IR::SelectExpression *se) {
     builder->append("ParserSelect(");
     visit(se->select);
-    builder->append(", ");
+    builder->append(", [");
     for (auto c : se->selectCases) {
         visit(c);
         builder->append(", ");
     }
-    builder->append(")");
+    builder->append("])");
     return false;
 }
 
