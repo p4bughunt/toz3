@@ -486,9 +486,12 @@ bool CodeGenToz3::preorder(const IR::IfStatement *ifs) {
     builder->append(", ");
     visit(ifs->ifTrue);
     builder->append(", ");
-    visit(ifs->ifFalse);
+    if (not ifs->ifFalse) {
+        builder->append("P4Noop()");
+    } else {
+        visit(ifs->ifFalse);
+    }
     builder->append(")");
-
     return false;
 }
 
