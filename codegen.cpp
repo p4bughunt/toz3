@@ -52,13 +52,13 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
     builder->append("from p4z3 import *\n\n");
     builder->newline();
     builder->newline();
-    builder->append("def p4_program(z3_reg):");
+    builder->append("def p4_program(prog_state):");
     depth = 1;
     builder->newline();
 
     // Start to visit the actual AST objects
     for (auto o : p->objects) {
-        builder->append(depth, "z3_reg.declare_global(");
+        builder->append(depth, "prog_state.declare_global(");
         builder->newline();
         depth++;
         builder->append(depth, "");
@@ -68,7 +68,7 @@ bool CodeGenToz3::preorder(const IR::P4Program *p) {
         builder->append(depth, ")");
         builder->newline();
     }
-    builder->append(depth, "var = z3_reg.get_main_function()");
+    builder->append(depth, "var = prog_state.get_main_function()");
     builder->newline();
     builder->append(depth,
                     "return var if isinstance(var, P4Package) else None");
@@ -155,7 +155,7 @@ bool CodeGenToz3::preorder(const IR::P4ValueSet *pvs) {
     auto pvs_name = infer_name(pvs->getAnnotations(), pvs->name.name);
     builder->appendFormat("P4Declaration(\"%s\", ", pvs->name.name);
     // Since we declare a symbolic value we only need the type and an instance
-    builder->appendFormat("gen_instance(z3_reg, \"%s\", ", pvs_name);
+    builder->appendFormat("gen_instance(prog_state, \"%s\", ", pvs_name);
     visit(pvs->elementType);
     builder->append(")");
     builder->append(")");
@@ -972,7 +972,7 @@ bool CodeGenToz3::preorder(const IR::Type_Parser *t) {
 bool CodeGenToz3::preorder(const IR::Type_Package *t) {
     auto t_name = t->getName().name;
     builder->appendFormat("ControlDeclaration(");
-    builder->appendFormat("P4Package(z3_reg, \"%s\", params=", t_name);
+    builder->appendFormat("P4Package(\"%s\", params=", t_name);
     visit(t->getConstructorParameters());
     builder->append(",type_params=");
     visit(t->getTypeParameters());
@@ -992,21 +992,21 @@ void CodeGenToz3::emit_args(const IR::Type_StructLike *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Header *t) {
-    builder->appendFormat("HeaderType(\"%s\", z3_reg, ", t->name.name);
+    builder->appendFormat("HeaderType(\"%s\", prog_state, ", t->name.name);
     emit_args(t);
     builder->append(")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_HeaderUnion *t) {
-    builder->appendFormat("HeaderUnionType(\"%s\", z3_reg,  ", t->name.name);
+    builder->appendFormat("HeaderUnionType(\"%s\", prog_state,  ", t->name.name);
     emit_args(t);
     builder->append(")");
     return false;
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Struct *t) {
-    builder->appendFormat("StructType(\"%s\", z3_reg, ", t->name.name);
+    builder->appendFormat("StructType(\"%s\", prog_state, ", t->name.name);
     emit_args(t);
     builder->append(")");
     return false;
@@ -1073,7 +1073,7 @@ bool CodeGenToz3::preorder(const IR::Type_Bits *t) {
     builder->appendFormat("z3.BitVecSort(");
 
     if (t->expression) {
-        builder->append("z3_reg.get_value(");
+        builder->append("prog_state.get_value(");
         visit(t->expression);
         builder->append(")");
     } else {
@@ -1107,7 +1107,7 @@ bool CodeGenToz3::preorder(const IR::Type_Varbits *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Stack *type) {
-    builder->append("z3_reg.stack(");
+    builder->append("prog_state.stack(");
     visit(type->elementType);
     builder->appendFormat(", %d)", type->getSize());
     return false;
@@ -1116,7 +1116,7 @@ bool CodeGenToz3::preorder(const IR::Type_Stack *type) {
 bool CodeGenToz3::preorder(const IR::Type_Tuple *t) {
     // This is a dummy type, not sure how to name it
     // TODO(Fabian): Figure out a better way to instantiate
-    builder->append("ListType(\"tuple\", z3_reg, [");
+    builder->append("ListType(\"tuple\", prog_state, [");
     for (auto c : t->components) {
         visit(c);
         builder->append(", ");
