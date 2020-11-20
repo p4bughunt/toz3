@@ -972,7 +972,7 @@ bool CodeGenToz3::preorder(const IR::Type_Parser *t) {
 bool CodeGenToz3::preorder(const IR::Type_Package *t) {
     auto t_name = t->getName().name;
     builder->appendFormat("ControlDeclaration(");
-    builder->appendFormat("P4Package(\"%s\", prog_state, params=", t_name);
+    builder->appendFormat("P4Package(\"%s\", params=", t_name);
     visit(t->getConstructorParameters());
     builder->append(",type_params=");
     visit(t->getTypeParameters());
