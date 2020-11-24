@@ -313,10 +313,9 @@ bool CodeGenToz3::preorder(const IR::P4Table *p4table) {
     // also check if the table is invisible to the control plane
     // this also implies that it cannot be modified
     auto annos = p4table->getAnnotations()->annotations;
-    if (std::any_of(annos.begin(), annos.end(),
-                    [](const IR::Annotation *anno) {
-                        return anno->name.name == "hidden";
-                    })) {
+    if (std::any_of(annos.begin(), annos.end(), [](const IR::Annotation *anno) {
+            return anno->name.name == "hidden";
+        })) {
         immutable = true;
     }
     if (immutable) {
@@ -769,15 +768,15 @@ bool CodeGenToz3::preorder(const IR::DefaultExpression *) {
 }
 
 bool CodeGenToz3::preorder(const IR::Constant *c) {
+    auto val_string = Util::toString(c->value, 0, false);
     if (auto tb = c->type->to<IR::Type_Bits>()) {
         if (tb->isSigned) {
-            builder->appendFormat("Z3Int(%s, %d)", c->toString(), tb->size);
+            builder->appendFormat("Z3Int(%s, %d)", val_string, tb->size);
         } else {
-            builder->appendFormat("z3.BitVecVal(%s, %d)", c->toString(),
-                                  tb->size);
+            builder->appendFormat("z3.BitVecVal(%s, %d)", val_string, tb->size);
         }
     } else if (c->type->is<IR::Type_InfInt>()) {
-        builder->appendFormat("%s", c->toString());
+        builder->appendFormat("%s", val_string);
     } else {
         FATAL_ERROR("Constant Node %s not implemented!",
                     c->type->node_type_name());
@@ -982,13 +981,15 @@ bool CodeGenToz3::preorder(const IR::Type_Package *t) {
 }
 
 void CodeGenToz3::emit_args(const IR::Type_StructLike *t) {
-    builder->append("z3_args=[");
+    builder->append("members=[");
     for (auto f : t->fields) {
         builder->appendFormat("(\"%s\", ", f->name.name);
         visit(f->type);
         builder->append("), ");
     }
-    builder->append("]");
+    builder->append("], ");
+    builder->append("type_params=");
+    visit(t->getTypeParameters());
 }
 
 bool CodeGenToz3::preorder(const IR::Type_Header *t) {
@@ -999,7 +1000,8 @@ bool CodeGenToz3::preorder(const IR::Type_Header *t) {
 }
 
 bool CodeGenToz3::preorder(const IR::Type_HeaderUnion *t) {
-    builder->appendFormat("HeaderUnionType(\"%s\", prog_state,  ", t->name.name);
+    builder->appendFormat("HeaderUnionType(\"%s\", prog_state,  ",
+                          t->name.name);
     emit_args(t);
     builder->append(")");
     return false;
