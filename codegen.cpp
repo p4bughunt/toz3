@@ -755,8 +755,8 @@ bool CodeGenToz3::preorder(const IR::StructExpression *sie) {
         builder->append(", ");
     }
     builder->append("], ");
-    if (sie->typeName) {
-        visit(sie->typeName);
+    if (sie->structType) {
+        visit(sie->structType);
     }
     builder->append(")");
 
