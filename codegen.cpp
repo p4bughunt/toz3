@@ -981,7 +981,7 @@ bool CodeGenToz3::preorder(const IR::Type_Package *t) {
 }
 
 void CodeGenToz3::emit_args(const IR::Type_StructLike *t) {
-    builder->append("members=[");
+    builder->append("fields=[");
     for (auto f : t->fields) {
         builder->appendFormat("(\"%s\", ", f->name.name);
         visit(f->type);
