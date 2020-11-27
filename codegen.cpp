@@ -155,7 +155,7 @@ bool CodeGenToz3::preorder(const IR::P4ValueSet *pvs) {
     auto pvs_name = infer_name(pvs->getAnnotations(), pvs->name.name);
     builder->appendFormat("P4Declaration(\"%s\", ", pvs->name.name);
     // Since we declare a symbolic value we only need the type and an instance
-    builder->appendFormat("gen_instance(prog_state, \"%s\", ", pvs_name);
+    builder->appendFormat("prog_state.gen_instance(\"%s\", ", pvs_name);
     visit(pvs->elementType);
     builder->append(")");
     builder->append(")");
